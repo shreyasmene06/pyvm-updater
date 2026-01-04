@@ -33,7 +33,7 @@ setup(
         "Programming Language :: Python :: 3.14",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.9",
     install_requires=[
         "requests>=2.25.0",
         "beautifulsoup4>=4.9.0",
