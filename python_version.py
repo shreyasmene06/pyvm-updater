@@ -511,7 +511,7 @@ def show_python_usage_instructions(version_str: str, os_name: str):
 
 @click.group(invoke_without_command=True)
 @click.pass_context
-@click.option('--version', is_flag=True, help='Show tool version')
+@click.option('--version', '-v', is_flag=True, help='Show tool version')
 def cli(ctx, version):
     """Python Version Manager - Check and install Python (does NOT modify system defaults)"""
     if version:
