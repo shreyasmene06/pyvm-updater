@@ -43,7 +43,7 @@ pyvm update     # Update to latest Python
 
 ## Installation
 
-### From GitHub (For New Users)
+### Method 1: From GitHub (For New Users)
 
 ```bash
 # Clone the repository
@@ -60,7 +60,7 @@ pip install --user .
 pip install --user pyvm-updater
 ```
 
-**Note for Linux users:** On newer systems (Ubuntu 23.04+, Debian 12+), use `--user` flag or see [troubleshooting](#-troubleshooting) if you get "externally-managed-environment" error.
+**Note for Linux users:** On newer systems (Ubuntu 23.04+, Debian 12+), use the `--user` flag or see [troubleshooting](#troubleshooting) if you encounter an "externally-managed-environment" error.
 
 ### Method 3: Install via pipx (Recommended for CLI tools)
 
@@ -79,9 +79,11 @@ pipx ensurepath
 source ~/.bashrc   # or source ~/.zshrc
 ```
 
-**Why pip with pip
-pip install --user .
+**Why use `--user` or pipx?** On newer Linux systems, using `pip install` without these options may fail with an "externally-managed-environment" error. Use the `--user` flag or see [troubleshooting](#troubleshooting) if you encounter this error.
 
+### Verify Installation
+
+```bash
 # Verify installation
 pyvm --version
 pyvm check
@@ -89,13 +91,9 @@ pyvm check
 
 All dependencies are automatically installed.
 
-### Vthe `--user` flag or see [troubleshooting](#troubleshooting) if you encounter an "externally-managed-environment" error.
+### Dependencies
 
-### Vb.com/shreyasmene06/pyvm-updater.git
-cd pyvm-updater
-
-# Optional: Check system requirements first
-python3 check_reqencounter permission errors, use `pip install --user .` instead of `pip install .`
+If you encounter permission errors, use `pip install --user .` instead of `pip install .`
 
 This will automatically install all required dependencies:
 
@@ -106,10 +104,9 @@ This will automatically install all required dependencies:
 
 The `pyvm` command will be available globally after installation.
 
-##ck
-dependency conflicts.
+### Special Note for Anaconda Users
 
-### Fr are using Anaconda or Miniconda, the `pyvm update` command will install the latest Python to your system, but your Anaconda environment will continue using its own Python version. This is expected behavior.
+If you are using Anaconda or Miniconda, the `pyvm update` command will install the latest Python to your system, but your Anaconda environment will continue using its own Python version. This is expected behavior.
 
 **How to check:**
 ```bash
@@ -130,12 +127,9 @@ python3.14 --version
 
 Anaconda manages its own Python installation separately from system Python. This prevents conflicts between your Anaconda packages and system packages.
 
-**For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
-
-##
 ---
 
-**For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
+**For detailed installation instructions, see [INSTALL.md](docs/INSTALL.md)**
 
 ## 📖 Usage
 
@@ -154,12 +148,11 @@ Output example:
 Checking Python version... (Current: 3.12.3)
 
 ========================================
-WARNING: A new version (3.14.0) is available!
-
-r version:   3.12.3
-Latest version: 3.14.0
-========================================
 ⚠ A new version (3.14.0) is available!
+
+Current version:   3.12.3
+Latest version:    3.14.0
+========================================
 
 💡 Tip: Run 'pyvm update' to upgrade Python
 ```
@@ -240,12 +233,14 @@ Admin/Sudo:       No
 ```
 
 ### Show tool version
-##--version
+
+```bash
+pyvm --version
 ```
 
 ---
-multiple Python versions side-by-side. Here i
-## 🔄 Using Your New Python Version
+
+## Using Your New Python Version
 
 After installation, you have **multiple Python versions** side-by-side. Here's how to use them effectively:
 
@@ -277,14 +272,13 @@ pip install -r requirements.txt
 
 # Deactivate when done
 deactivate
+```
 
+**Benefits:**
 * Isolated dependencies per project
 * No system modifications
 * Easy to switch between Python versions
-* Isolated dependencies per project
-- ✅ No system modifications
-- ✅ Easy to switch between Python versions
-- ✅ No risk of breaking system tools
+* No risk of breaking system tools
 
 ### Alternative: Direct Invocation
 
@@ -300,19 +294,19 @@ python3.12 -m pip install requests
 
 ### Option for Advanced Users: Change System Default
 
-⚠️ **Warning:** Only do this if you understand the risks!
+**Warning:** Only do this if you understand the risks!
 
-**Warning:** Only do this if you understand the risks.
+Changing your system's default Python can break system tools. If you still want to proceed:
 
-Changing your system's default Python can break system tools. If you still want to proceed
+```bash
 # Manually configure (at your own risk)
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
 sudo update-alternatives --config python3
 ```
 
-**We do NOT recommend this approach.** Virtual environments are much safer.
+**We do NOT recommend this approach.** Virtual environments are much safer as they do not modify system defaults and prevent dependency conflicts.
 
-We do not recommend this approach. Virtual environments are much safer as they do no
+### Windows: Using Multiple Python Versions
 
 Windows Python Launcher (`py`) handles multiple versions automatically:
 
@@ -324,20 +318,14 @@ py -3.14 your_script.py
 py --list
 
 # Set default in py.ini (optional)
-# Create/edit: C:\Windows\py.ini
+# Create or edit: C:\Windows\py.ini
 # Add: [defaults]
 #      python=3.14
 ```
- or edit: C:\Windows\py.ini
-# Add: [defaults]
-#      python=3.14
-``` Windows
-- Downloads the official Python installer (.exe)
-- Runs the installer interactively
-- **Recommendation**: Check "Add Python to PATH" during installation
 
-### Linux
-- Uses system package managers (apt, yum, dnf)
+## How It Works
+
+### Windows
 
 * Downloads the official Python installer (.exe)
 * Runs the installer interactively
@@ -367,7 +355,13 @@ py --list
 * `requests` – HTTP library
 * `beautifulsoup4` – HTML parsing
 * `packaging` – Version comparison
-* `click` –Check Python version (default) |
+* `click` – CLI framework
+
+## Command Reference
+
+| Command | Description |
+|---------|-------------|
+| `pyvm` | Check Python version (default) |
 | `pyvm check` | Check Python version |
 | `pyvm update` | Update Python to latest version |
 | `pyvm update --auto` | Update without confirmation |
@@ -381,14 +375,14 @@ py --list
 
 ## Exit Codes
 
-- `0` - Success or up-to-date
-- `1` - Update available or error occurred
-- `130` - Operation cancelled by user (Ctrl+C)
 * `0` – Success or up-to-date
 * `1` – Update available or error occurred
 * `130` – Operation cancelled by user (Ctrl+C)
 
-##
+## Troubleshooting
+
+### "externally-managed-environment" Error
+
 **Error message:**
 ```
 error: externally-managed-environment
@@ -451,8 +445,8 @@ source ~/.zshrc   # for zsh
 After running `pipx ensurepath`, you should see a message that PATH was updated. Restart your terminal to apply changes.
 
 **Windows:**
-- Add `C:\Users\YourName\AppData\Local\Programs\Python\Python3xx\Scripts` to PATH
-- Or restart your terminal/command prompt
+* Add `C:\Users\YourName\AppData\Local\Programs\Python\Python3xx\Scripts` to PATH
+* Or restart your terminal/command prompt
 
 ### "Already installed but still shows old version"
 
@@ -472,25 +466,28 @@ pip install --user .    # Instead of: pip install --user -e .
 ```
 
 The difference:
-- `pip install .` - Regular installation (recommended)
-- `pip install -e .` - Editable/development mode (may conflict with Anaconda)
+* `pip install .` - Regular installation (recommended)
+* `pip install -e .` - Editable/development mode (may conflict with Anaconda)
 
 ### Import errors
+
 If you get import errors, install dependencies manually:
 ```bash
 pip install requests beautifulsoup4 packaging click
 ```
 
 ### Permission errors (Linux/macOS)
+
 Some operations require elevated privileges:
 ```bash
 sudo pyvm update
 ```
 
 ### Windows installer issues
-- Make sure you have administrator privileges
-- Temporarily disable antivirus if installer is blocked
-- Download manually from https://www.python.org/downloads/
+
+* Make sure you have administrator privileges
+* Temporarily disable antivirus if installer is blocked
+* Download manually from https://www.python.org/downloads/
 
 ### "Python updated but I still see the old version"
 
@@ -506,10 +503,7 @@ python3.14 --version          # Linux/macOS
 py -3.14 --version           # Windows
 ```
 
-**Want to make the new Python your default?** See the detailed guide: [Making Updated Python the Default](#-making-updated-python-the-default)
-
-## Development
- in the [Option for Advanced Users: Change System Default](#option-for-advanced-users-change-system-default) section.
+**Want to make the new Python your default?** See the [Option for Advanced Users: Change System Default](#option-for-advanced-users-change-system-default) section.
 
 ## Development
 
@@ -567,6 +561,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Author
 
 Shreyas Mene
+
 ## Disclaimer
 
 This tool downloads and installs software from python.org. Always verify the authenticity of downloaded files. The authors are not responsible for any issues arising from Python installations.
