@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Python Version Manager - CLI Tool
 Checks and installs Python to the latest version across Windows, Linux, and macOS
