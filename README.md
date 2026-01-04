@@ -2,7 +2,10 @@
 
 A cross-platform CLI tool to check and install the latest Python version side-by-side with your existing Python installation.
 
-## CRITICAL UPDATE (v1.2.1)
+[![PyPI version](https://badge.fury.io/py/pyvm-updater.svg)](https://badge.fury.io/py/pyvm-updater)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## 🚨 CRITICAL UPDATE (v1.2.1)
 
 **If you are using v1.2.0 or earlier:** Please update immediately.
 
@@ -17,52 +20,51 @@ pip install --user -e .
 
 See [docs/CRITICAL_SECURITY_FIX_v1.2.1.md](docs/CRITICAL_SECURITY_FIX_v1.2.1.md) for details and recovery instructions.
 
-**Documentation**: [Installation Guide](docs/INSTALL.md) | [Quick Start](docs/QUICKSTART.md) | [Quick Reference](docs/QUICK_REFERENCE.md)
+---
 
-## Quick Start
+**📚 Documentation**: [Installation Guide](docs/INSTALL.md) | [Quick Start](docs/QUICKSTART.md) | [Quick Reference](docs/QUICK_REFERENCE.md)
+
+---
+
+## ✨ Features
+
+* ✅ Check your current Python version against the latest stable release
+* ✅ Install the latest Python side-by-side with your existing version
+* ✅ Cross-platform support (Windows, Linux, macOS)
+* ✅ Detailed system information display
+* ✅ Simple and intuitive CLI interface
+* ✅ Safe: Never modifies your system Python defaults
+* ✅ Multiple Python versions coexist peacefully
+* ✅ Clear instructions on how to use the new version
+
+---
+
+## 🚀 Quick Start
 
 ```bash
 # Install the package
 pip install --user pyvm-updater
 
-# Use it
-pyvm check      # Check your Python version
-pyvm update     # Update to latest Python
+# Check your Python version
+pyvm check
+
+# Update to latest Python
+pyvm update
 ```
 
-## Features
+---
 
-* Check your current Python version against the latest stable release
-* Install the latest Python side-by-side with your existing version
-* Cross-platform support (Windows, Linux, macOS)
-* Detailed system information display
-* Simple and intuitive CLI interface
-* Safe: Never modifies your system Python defaults
-* Multiple Python versions coexist peacefully
-* Clear instructions on how to use the new version
+## 📦 Installation
 
-## Installation
-
-### From GitHub (For New Users)
-
-```bash
-# Clone the repository
-git clone https://github.com/shreyasmene06/pyvm-updater.git
-cd pyvm-updater
-
-# Install
-pip install --user .
-```
-
-### Method 2: Install via pip (Published on PyPI)
+### Method 1: Install via pip (Recommended)
 
 ```bash
 pip install --user pyvm-updater
 ```
 
-**Note for Linux users:** On newer systems (Ubuntu 23.04+, Debian 12+), use `--user` flag or see [troubleshooting](#-troubleshooting) if you get "externally-managed-environment" error.
+**Note for Linux users:** On newer systems (Ubuntu 23.04+, Debian 12+), use the `--user` flag or see [troubleshooting](#-troubleshooting) if you get an "externally-managed-environment" error.
 
-### Method 3: Install via pipx (Recommended for CLI tools)
+### Method 2: Install via pipx (Best for CLI tools)
 
 ```bash
 # Install pipx if you don't have it
@@ -79,8 +81,17 @@ pipx ensurepath
 source ~/.bashrc   # or source ~/.zshrc
 ```
 
-**Why pip with pip
-pip install --user .
+**Why pipx?** It installs CLI tools in isolated environments, preventing dependency conflicts.
+
+### Method 3: Install from GitHub (For Development)
+
+```bash
+# Clone the repository
+git clone https://github.com/shreyasmene06/pyvm-updater.git
+cd pyvm-updater
+
+# Install in editable mode
+pip install --user -e .
 
 # Verify installation
 pyvm --version
@@ -89,27 +100,9 @@ pyvm check
 
 All dependencies are automatically installed.
 
-### Vthe `--user` flag or see [troubleshooting](#troubleshooting) if you encounter an "externally-managed-environment" error.
+### ⚠️ Special Note for Anaconda Users
 
-### Vb.com/shreyasmene06/pyvm-updater.git
-cd pyvm-updater
-
-# Optional: Check system requirements first
-python3 check_reqencounter permission errors, use `pip install --user .` instead of `pip install .`
-
-This will automatically install all required dependencies:
-
-* requests
-* beautifulsoup4
-* packaging
-* click
-
-The `pyvm` command will be available globally after installation.
-
-##ck
-dependency conflicts.
-
-### Fr are using Anaconda or Miniconda, the `pyvm update` command will install the latest Python to your system, but your Anaconda environment will continue using its own Python version. This is expected behavior.
+If you are using Anaconda or Miniconda, the `pyvm update` command will install the latest Python to your system, but your Anaconda environment will continue using its own Python version. This is expected behavior.
 
 **How to check:**
 ```bash
@@ -130,16 +123,11 @@ python3.14 --version
 
 Anaconda manages its own Python installation separately from system Python. This prevents conflicts between your Anaconda packages and system packages.
 
-**For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
-
-##
 ---
-
-**For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
 
 ## 📖 Usage
 
-### Check Python version
+### Check Python Version
 
 Simply run the tool to check your Python version:
 
@@ -149,17 +137,16 @@ pyvm
 pyvm check
 ```
 
-Output example:
+**Output example:**
 ```
 Checking Python version... (Current: 3.12.3)
 
 ========================================
-WARNING: A new version (3.14.0) is available!
+⚠ WARNING: A new version (3.14.0) is available!
 
-r version:   3.12.3
-Latest version: 3.14.0
+Current version:   3.12.3
+Latest version:    3.14.0
 ========================================
-⚠ A new version (3.14.0) is available!
 
 💡 Tip: Run 'pyvm update' to upgrade Python
 ```
@@ -180,51 +167,13 @@ pyvm update --auto
 
 **IMPORTANT:** This command installs Python side-by-side. Your system Python remains unchanged.
 
-### After Installing - How to Use the New Python
-
-Once installation completes, the new Python is available side-by-side with your existing version:
-
-**Linux/macOS:**
-```bash
-# Your old Python (unchanged)
-python3 --version          # Shows: Python 3.10.x (or whatever you had)
-
-# Your new Python (side-by-side)
-python3.12 --version       # Shows: Python 3.12.x
-
-# Use the new Python for a script
-python3.12 your_script.py
-
-# Create a virtual environment with the new Python
-python3.12 -m venv myproject
-source myproject/bin/activate
-python --version           # Now shows 3.12.x in this venv
-```
-
-**Windows:**
-```bash
-# List all Python versions
-py --list
-
-# Use specific version
-py -3.12 your_script.py
-
-# Create virtual environment
-py -3.12 -m venv myproject
-myproject\Scripts\activate
-```
-
-**Why doesn't `python3` automatically use the new version?**
-
-This is intentional and safe! Your system tools (package managers, system utilities) depend on the Python version they were built with. Changing the default could break them. The tool gives you the new Python to use when YOU choose, without risking your system.
-
-### Show system information
+### Show System Information
 
 ```bash
 pyvm info
 ```
 
-Output example:
+**Output example:**
 ```
 ==================================================
            System Information
@@ -239,12 +188,14 @@ Admin/Sudo:       No
 ==================================================
 ```
 
-### Show tool version
-##--version
+### Show Tool Version
+
+```bash
+pyvm --version
 ```
 
 ---
-multiple Python versions side-by-side. Here i
+
 ## 🔄 Using Your New Python Version
 
 After installation, you have **multiple Python versions** side-by-side. Here's how to use them effectively:
@@ -256,10 +207,13 @@ After installation, you have **multiple Python versions** side-by-side. Here's h
 python3 --version          # Shows: Python 3.10.x
 
 # Your new Python (side-by-side)
-python3.12 --version       # Shows: Python 3.12.x
+python3.14 --version       # Shows: Python 3.14.x
 
-# See all installed versions
+# See all installed versions (Linux/macOS)
 ls /usr/bin/python* | grep -E 'python[0-9]'
+
+# See all installed versions (Windows)
+py --list
 ```
 
 ### Best Practice: Use Virtual Environments (Recommended)
@@ -268,23 +222,22 @@ This is the safest and most flexible approach:
 
 ```bash
 # Create project with new Python
-python3.12 -m venv myproject
+python3.14 -m venv myproject
 source myproject/bin/activate
 
 # Now you're using the new Python in this project
-python --version           # Shows: Python 3.12.x
+python --version           # Shows: Python 3.14.x
 pip install -r requirements.txt
 
 # Deactivate when done
 deactivate
+```
 
-* Isolated dependencies per project
-* No system modifications
-* Easy to switch between Python versions
-* Isolated dependencies per project
-- ✅ No system modifications
-- ✅ Easy to switch between Python versions
-- ✅ No risk of breaking system tools
+**Benefits:**
+* ✅ Isolated dependencies per project
+* ✅ No system modifications
+* ✅ Easy to switch between Python versions
+* ✅ No risk of breaking system tools
 
 ### Alternative: Direct Invocation
 
@@ -292,27 +245,27 @@ Always specify which version you want:
 
 ```bash
 # Run scripts with new Python
-python3.12 your_script.py
+python3.14 your_script.py
 
 # Install packages for new Python
-python3.12 -m pip install requests
+python3.14 -m pip install requests
 ```
 
 ### Option for Advanced Users: Change System Default
 
 ⚠️ **Warning:** Only do this if you understand the risks!
 
-**Warning:** Only do this if you understand the risks.
+Changing your system's default Python can break system tools. If you still want to proceed:
 
-Changing your system's default Python can break system tools. If you still want to proceed
+```bash
 # Manually configure (at your own risk)
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.14 1
 sudo update-alternatives --config python3
 ```
 
 **We do NOT recommend this approach.** Virtual environments are much safer.
 
-We do not recommend this approach. Virtual environments are much safer as they do no
+### Windows Python Launcher
 
 Windows Python Launcher (`py`) handles multiple versions automatically:
 
@@ -324,71 +277,79 @@ py -3.14 your_script.py
 py --list
 
 # Set default in py.ini (optional)
-# Create/edit: C:\Windows\py.ini
-# Add: [defaults]
-#      python=3.14
+# Create or edit: C:\Windows\py.ini
+# Add:
+#   [defaults]
+#   python=3.14
 ```
- or edit: C:\Windows\py.ini
-# Add: [defaults]
-#      python=3.14
-``` Windows
-- Downloads the official Python installer (.exe)
-- Runs the installer interactively
-- **Recommendation**: Check "Add Python to PATH" during installation
 
-### Linux
-- Uses system package managers (apt, yum, dnf)
+---
 
+## 🔧 How It Works
+
+### Windows
 * Downloads the official Python installer (.exe)
 * Runs the installer interactively
 * **Recommendation**: Check "Add Python to PATH" during installation
 
 ### Linux
-
 * Uses system package managers (apt, yum, dnf)
 * May require `sudo` privileges
 * For Ubuntu/Debian: Uses deadsnakes PPA for latest versions
 * **Alternative**: Install pyenv for easier version management
 
 ### macOS
-
 * Uses Homebrew if available
 * Falls back to official installer download link
 * Run `brew install python@3.x` for Homebrew installation
 
-## Requirements
+---
+
+## 📋 Requirements
 
 * Python 3.7 or higher
 * Internet connection
 * Admin/sudo privileges (for updates on some systems)
 
-## Dependencies
+### Dependencies
+
+All dependencies are automatically installed:
 
 * `requests` – HTTP library
 * `beautifulsoup4` – HTML parsing
 * `packaging` – Version comparison
-* `click` –Check Python version (default) |
+* `click` – CLI framework
+
+---
+
+## 📚 Command Reference
+
+| Command | Description |
+|---------|-------------|
+| `pyvm` | Check Python version (default) |
 | `pyvm check` | Check Python version |
 | `pyvm update` | Update Python to latest version |
 | `pyvm update --auto` | Update without confirmation |
 | `pyvm update --set-default` | Update and set as system default (Linux) |
 | `pyvm update --auto --set-default` | Fully automated update and setup (Linux) |
 | `pyvm set-default` | List available Python versions (Linux) |
-| `pyvm set-default 3.12` | Set Python 3.12 as system default (Linux) |
+| `pyvm set-default 3.14` | Set Python 3.14 as system default (Linux) |
 | `pyvm info` | Show system information |
 | `pyvm --version` | Show tool version |
 | `pyvm --help` | Show help message |
 
-## Exit Codes
+### Exit Codes
 
-- `0` - Success or up-to-date
-- `1` - Update available or error occurred
-- `130` - Operation cancelled by user (Ctrl+C)
 * `0` – Success or up-to-date
 * `1` – Update available or error occurred
 * `130` – Operation cancelled by user (Ctrl+C)
 
-##
+---
+
+## 🐛 Troubleshooting
+
+### "externally-managed-environment" Error
+
 **Error message:**
 ```
 error: externally-managed-environment
@@ -448,11 +409,9 @@ source ~/.bashrc  # for bash
 source ~/.zshrc   # for zsh
 ```
 
-After running `pipx ensurepath`, you should see a message that PATH was updated. Restart your terminal to apply changes.
-
 **Windows:**
-- Add `C:\Users\YourName\AppData\Local\Programs\Python\Python3xx\Scripts` to PATH
-- Or restart your terminal/command prompt
+* Add `C:\Users\YourName\AppData\Local\Programs\Python\Python3xx\Scripts` to PATH
+* Or restart your terminal/command prompt
 
 ### "Already installed but still shows old version"
 
@@ -472,25 +431,28 @@ pip install --user .    # Instead of: pip install --user -e .
 ```
 
 The difference:
-- `pip install .` - Regular installation (recommended)
-- `pip install -e .` - Editable/development mode (may conflict with Anaconda)
+* `pip install .` – Regular installation (recommended)
+* `pip install -e .` – Editable/development mode (may conflict with Anaconda)
 
-### Import errors
+### Import Errors
+
 If you get import errors, install dependencies manually:
 ```bash
 pip install requests beautifulsoup4 packaging click
 ```
 
-### Permission errors (Linux/macOS)
+### Permission Errors (Linux/macOS)
+
 Some operations require elevated privileges:
 ```bash
 sudo pyvm update
 ```
 
-### Windows installer issues
-- Make sure you have administrator privileges
-- Temporarily disable antivirus if installer is blocked
-- Download manually from https://www.python.org/downloads/
+### Windows Installer Issues
+
+* Make sure you have administrator privileges
+* Temporarily disable antivirus if installer is blocked
+* Download manually from https://www.python.org/downloads/
 
 ### "Python updated but I still see the old version"
 
@@ -506,12 +468,9 @@ python3.14 --version          # Linux/macOS
 py -3.14 --version           # Windows
 ```
 
-**Want to make the new Python your default?** See the detailed guide: [Making Updated Python the Default](#-making-updated-python-the-default)
+---
 
-## Development
- in the [Option for Advanced Users: Change System Default](#option-for-advanced-users-change-system-default) section.
-
-## Development
+## 👨‍💻 Development
 
 ```bash
 # Clone the repository
@@ -538,9 +497,11 @@ python -m pytest --cov=pyvm_updater
 python -m pytest tests/test_specific.py
 ```
 
-## Contributing
+---
 
-Contributions are welcome and appreciated. To contribute:
+## 🤝 Contributing
+
+Contributions are welcome and appreciated! To contribute:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/your-feature-name`)
@@ -560,13 +521,34 @@ Contributions are welcome and appreciated. To contribute:
 
 For more details, see [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## License
+---
+
+## 📄 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Author
+---
 
-Shreyas Mene
-## Disclaimer
+## 👤 Author
+
+**Shreyas Mene**
+
+* GitHub: [@shreyasmene06](https://github.com/shreyasmene06)
+
+---
+
+## ⚠️ Disclaimer
 
 This tool downloads and installs software from python.org. Always verify the authenticity of downloaded files. The authors are not responsible for any issues arising from Python installations.
+
+---
+
+## 🙏 Acknowledgments
+
+* Thanks to all contributors who have helped improve this project
+* Python Software Foundation for providing Python releases
+* The open-source community for inspiration and support
+
+---
+
+**Made with ❤️ by Shreyas Mene**
