@@ -327,8 +327,8 @@ def update_python_linux(version_str: str) -> bool:
         
         print(f"\n✅ Python {major_minor} installed successfully at {python_path}")
         print(f"\n💡 Your system Python remains unchanged. Use 'python{major_minor}' to access the new version.")
-        return True
-    
+
+
     elif shutil.which('yum') or shutil.which('dnf'):
         pkg_mgr = 'dnf' if shutil.which('dnf') else 'yum'
         print(f"Using {pkg_mgr} package manager...")
