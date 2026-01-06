@@ -223,14 +223,7 @@ def update_python_windows(version_str: str) -> bool:
         print(f"Error parsing version string '{version_str}': {e}")
         return False
     
-    # Detect architecture - handle ARM64, AMD64, and default to win32
-    machine = platform.machine().lower()
-    if machine in ['amd64', 'x86_64']:
-        arch = 'amd64'
-    elif machine in ['arm64', 'aarch64']:
-        arch = 'arm64'
-    else:
-        arch = 'win32'
+    arch = 'amd64' if platform.machine().lower() in ['amd64', 'x86_64'] else 'win32'
     installer_url = f"https://www.python.org/ftp/python/{version_str}/python-{version_str}-{arch}.exe"
     
     temp_dir = tempfile.gettempdir()
