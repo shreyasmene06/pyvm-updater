@@ -405,6 +405,28 @@ def get_available_python_versions(limit: int = 50) -> List[dict]:
         return []
 
 
+def download_file_with_retry(url: str, destination: str, max_retries: int = MAX_RETRIES) -> bool:
+    """Download a file with retry logic for robustness"""
+    for attempt in range(max_retries):
+        try:
+            result = download_file(url, destination)
+            if result:  # If download succeeded
+                return result
+            if attempt < max_retries - 1:
+                wait_time = RETRY_DELAY * (attempt + 1)  # Exponential backoff
+                print(f"\nRetrying download in {wait_time} seconds...")
+                time.sleep(wait_time)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = RETRY_DELAY * (attempt + 1)
+                print(f"Download attempt {attempt + 1} failed: {e}")
+                print(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                print(f"All download retry attempts failed: {e}")
+    return False
+
+
 def download_file(url: str, destination: str) -> bool:
     """Download a file with Click progress bar"""
     try:
@@ -496,7 +518,7 @@ def update_python_windows(version_str: str) -> bool:
     installer_path = os.path.join(temp_dir, f"python-{version_str}-installer.exe")
     
     print(f"Downloading from: {installer_url}")
-    if not download_file(installer_url, installer_path):
+    if not download_file_with_retry(installer_url, installer_path):
         return False
     
     print("\n⚠️  Starting installer...")
