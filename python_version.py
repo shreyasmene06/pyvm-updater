@@ -405,68 +405,68 @@ def get_available_python_versions(limit: int = 50) -> List[dict]:
         return []
 
 
-def download_file_with_retry(url: str, destination: str, max_retries: int = MAX_RETRIES) -> bool:
-    """Download a file with retry logic for robustness"""
+def download_file(url: str, destination: str, max_retries: int = MAX_RETRIES) -> bool:
+    """Download a file with retry logic, progress indication, and cleanup"""
+    if not url.startswith(("http://", "https://")):
+        click.echo(f"❌ Invalid URL: {url}")
+        return False
+
     for attempt in range(max_retries):
         try:
-            result = download_file(url, destination)
-            if result:  # If download succeeded
-                return result
-            if attempt < max_retries - 1:
-                wait_time = RETRY_DELAY * (attempt + 1)  # Exponential backoff
-                print(f"\nRetrying download in {wait_time} seconds...")
-                time.sleep(wait_time)
-        except Exception as e:
+            response = requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT)
+            
+            # 4xx Client Errors: Do not retry (e.g., 404 Not Found)
+            if 400 <= response.status_code < 500:
+                click.echo(f"❌ Download failed with client error {response.status_code}")
+                return False
+                
+            response.raise_for_status()
+
+            total_size = int(response.headers.get("content-length", 0))
+            chunk_size = 8192
+
+            with open(destination, "wb") as f:
+                with click.progressbar(
+                    length=total_size,
+                    label="⬇ Downloading",
+                    show_eta=True,
+                    show_percent=True,
+                ) as bar:
+                    for chunk in response.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            f.write(chunk)
+                            bar.update(len(chunk))
+
+            # Verify file
+            if not os.path.exists(destination):
+                click.echo("❌ Download failed: file not found")
+                return False
+
+            # Verify size
+            if total_size and os.path.getsize(destination) != total_size:
+                 click.echo(f"❌ File size mismatch. Expected {total_size}, got {os.path.getsize(destination)}")
+                 raise IOError("File size mismatch")
+
+            return True
+
+        except (requests.RequestException, IOError) as e:
+            # Cleanup partial file
+            if os.path.exists(destination):
+                try:
+                    os.remove(destination)
+                except OSError:
+                    pass
+            
             if attempt < max_retries - 1:
                 wait_time = RETRY_DELAY * (attempt + 1)
-                print(f"Download attempt {attempt + 1} failed: {e}")
-                print(f"Retrying in {wait_time} seconds...")
+                click.echo(f"\n⚠️ Attempt {attempt + 1} failed: {e}")
+                click.echo(f"Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
             else:
-                print(f"All download retry attempts failed: {e}")
+                click.echo(f"\n❌ All download attempts failed: {e}")
+                return False
+
     return False
-
-
-def download_file(url: str, destination: str) -> bool:
-    """Download a file with Click progress bar"""
-    try:
-        if not url.startswith(("http://", "https://")):
-            click.echo(f"❌ Invalid URL: {url}")
-            return False
-
-        response = requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT)
-        response.raise_for_status()
-
-        total_size = int(response.headers.get("content-length", 0))
-        chunk_size = 8192
-
-        with open(destination, "wb") as f:
-            with click.progressbar(
-                length=total_size,
-                label="⬇ Downloading",
-                show_eta=True,
-                show_percent=True,
-            ) as bar:
-                for chunk in response.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        f.write(chunk)
-                        bar.update(len(chunk))
-
-        if not os.path.exists(destination):
-            click.echo("❌ Download failed: file not found")
-            return False
-
-        return True
-
-    except requests.Timeout:
-        click.echo("❌ Download timed out")
-        return False
-    except requests.RequestException as e:
-        click.echo(f"❌ Download error: {e}")
-        return False
-    except Exception as e:
-        click.echo(f"❌ Unexpected error: {e}")
-        return False
 
 
 
@@ -483,7 +483,7 @@ def update_python_windows(version_str: str) -> bool:
     try:
         parts = version_str.split('.')
         if len(parts) < 3:
-            print(f"Error: Version string must have major.minor.patch format: {version_str}")
+            print(f"Error: Version string must have major   .minor.patch format: {version_str}")
             return False
         major, minor, patch = parts[0], parts[1], parts[2]
     except (ValueError, IndexError) as e:
@@ -518,7 +518,7 @@ def update_python_windows(version_str: str) -> bool:
     installer_path = os.path.join(temp_dir, f"python-{version_str}-installer.exe")
     
     print(f"Downloading from: {installer_url}")
-    if not download_file_with_retry(installer_url, installer_path):
+    if not download_file(installer_url, installer_path):
         return False
     
     print("\n⚠️  Starting installer...")
