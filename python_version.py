@@ -676,13 +676,18 @@ def update_python_macos(version_str: str) -> bool:
         print(f"Error: Invalid version string: {version_str}")
         return False
     
-    # Extract major.minor version for reuse
+    # Extract version numbers for logic
     try:
         parts = version_str.split('.')
         if len(parts) < 2:
             print(f"Error: Invalid version format: {version_str}")
             return False
-        major_minor = f"{parts[0]}.{parts[1]}"
+        
+        # Convert to integers for comparison (Requested by maintainer)
+        major = int(parts[0])
+        minor = int(parts[1])
+        major_minor = f"{major}.{minor}"
+        
     except (ValueError, IndexError) as e:
         print(f"Error parsing version: {e}")
         return False
@@ -760,20 +765,29 @@ def update_python_macos(version_str: str) -> bool:
             print(f"Error running Homebrew: {e}")
             # Do not return False here; let it fall through to the direct installer
     
-    # FALLBACK: Direct Download (Official Installer). This runs if no package managers are found OR if they failed above.
+    # FALLBACK: Direct Download (Official Installer)
+    # This runs if no package managers are found OR if they failed above.
     print("\nNo package manager found or installation failed.")
     print("Falling back to official Python.org installer...")
     
-    # Construct the Correct URL (FTP-based). Maintainer Request: Use dots (e.g. 3.11.0) and 'macos11.pkg' suffix
-    macos_installer_url = f"https://www.python.org/ftp/python/{version_str}/python-{version_str}-macos11.pkg"
+    # Determine correct installer suffix based on Python version
+    # Python 3.9+ uses 'macos11.pkg' (Universal2)
+    # Python 3.8 and older use 'macosx10.9.pkg'
+    if major > 3 or (major == 3 and minor >= 9):
+        installer_suffix = "macos11.pkg"
+    else:
+        installer_suffix = "macosx10.9.pkg"
+        
+    installer_filename = f"python-{version_str}-{installer_suffix}"
+    macos_installer_url = f"https://www.python.org/ftp/python/{version_str}/{installer_filename}"
     
     # Prepare paths
     temp_dir = tempfile.gettempdir()
-    installer_path = os.path.join(temp_dir, f"python-{version_str}-macos11.pkg")
+    installer_path = os.path.join(temp_dir, installer_filename)
     
     print(f"Downloading from: {macos_installer_url}")
     
-# Download (using the existing helper function in your file)
+    # Download (using the existing helper function in your file)
     if not download_file(macos_installer_url, installer_path):
         return False
     
