@@ -773,7 +773,32 @@ def update_python_macos(version_str: str) -> bool:
     
     print(f"Downloading from: {macos_installer_url}")
     
-    # Download (using the existing helper function in
+# Download (using the existing helper function in your file)
+    if not download_file(macos_installer_url, installer_path):
+        return False
+    
+    # Install
+    print("\n⚠️  Starting installer...")
+    print("You may be prompted for your sudo password to allow installation.")
+    try:
+        # Run the macOS installer command
+        subprocess.run(['sudo', 'installer', '-pkg', installer_path, '-target', '/'], check=True)
+        print(f"\n[OK] Python {version_str} successfully installed!")
+        return True
+        
+    except subprocess.CalledProcessError:
+        print("Error: Installer failed.")
+        return False
+    except PermissionError:
+        print("Error: Permission denied. Please run with sudo.")
+        return False
+    finally:
+        # Cleanup
+        if os.path.exists(installer_path):
+            try:
+                os.remove(installer_path)
+            except OSError:
+                pass
     
 def check_python_version(silent: bool = False) -> Tuple[str, Optional[str], bool]:
     """
