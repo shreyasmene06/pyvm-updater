@@ -719,7 +719,7 @@ def update_python_macos(version_str: str) -> bool:
             print(f"mise error: {e}")
     
     # Priority 2: Use pyenv if available
-    if shutil.which('brew'):
+    if shutil.which('pyenv'):
         print("Using pyenv to install Python...")
         
         try:
@@ -741,53 +741,40 @@ def update_python_macos(version_str: str) -> bool:
             print(f"pyenv error: {e}")
     
     # Priority 3: Use Homebrew
-    if False: # shutil.which('brew')::
+    if shutil.which('brew'):
         print("Using Homebrew...")
-        
         try:
-            # Update Homebrew
             print("Updating Homebrew...")
-            result = subprocess.run(["brew", "update"], check=False, capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"Warning: brew update failed: {result.stderr}")
+            subprocess.run(["brew", "update"], check=False, capture_output=True)
             
-            # Try to install specific version using python@major.minor format
             formula_name = f"python@{major_minor}"
             print(f"Installing Python {version_str} via Homebrew (formula: {formula_name})...")
-            result = subprocess.run(["brew", "install", formula_name], check=False, capture_output=True, text=True)
+            result = subprocess.run(["brew", "install", formula_name], check=False)
             
             if result.returncode == 0:
-                print(f"[OK] Python {version_str} installed successfully via Homebrew")
-                print(f"\nNote: Homebrew installs the latest patch version of {major_minor}.")
-                print(f"The exact version {version_str} may differ slightly.")
+                print(f"[OK] Python {version_str} installed via Homebrew")
                 return True
             else:
-                # If specific version not available, provide download link
-                print(f"Homebrew formula '{formula_name}' may not be available.")
-                print(f"Homebrew typically installs the latest patch version of {major_minor}.")
-                print("\nAlternative: Install via official installer from python.org")
-                print(f"  https://www.python.org/ftp/python/{version_str}/python-{version_str}-macos11.pkg")
-                return False
-            
-        except FileNotFoundError:
-            print("Error: Homebrew command not found")
-            return False
+                print(f"Homebrew install failed. Falling back to direct installer...")
         except Exception as e:
             print(f"Error running Homebrew: {e}")
-            return False
+            # Do not return False here; let it fall through to the direct installer
     
-    # No package manager found
-    print("No package manager found (mise, pyenv, or Homebrew).")
-    print("\nOption 1: Install via official installer")
-    print(f"  https://www.python.org/ftp/python/{version_str}/python-{version_str}-macos11.pkg")
+    # FALLBACK: Direct Download (Official Installer). This runs if no package managers are found OR if they failed above.
+    print("\nNo package manager found or installation failed.")
+    print("Falling back to official Python.org installer...")
     
-    print("\nOption 2: Install mise (recommended)")
-    print("  curl https://mise.run | sh")
-    print(f"  mise install python@{version_str}")
+    # Construct the Correct URL (FTP-based). Maintainer Request: Use dots (e.g. 3.11.0) and 'macos11.pkg' suffix
+    macos_installer_url = f"https://www.python.org/ftp/python/{version_str}/python-{version_str}-macos11.pkg"
     
-    return False
-
-
+    # Prepare paths
+    temp_dir = tempfile.gettempdir()
+    installer_path = os.path.join(temp_dir, f"python-{version_str}-macos11.pkg")
+    
+    print(f"Downloading from: {macos_installer_url}")
+    
+    # Download (using the existing helper function in
+    
 def check_python_version(silent: bool = False) -> Tuple[str, Optional[str], bool]:
     """
     Check local Python version against the latest stable version from python.org
