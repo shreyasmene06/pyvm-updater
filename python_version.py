@@ -719,7 +719,7 @@ def update_python_macos(version_str: str) -> bool:
             print(f"mise error: {e}")
     
     # Priority 2: Use pyenv if available
-    if shutil.which('pyenv'):
+    if shutil.which('brew'):
         print("Using pyenv to install Python...")
         
         try:
@@ -741,7 +741,7 @@ def update_python_macos(version_str: str) -> bool:
             print(f"pyenv error: {e}")
     
     # Priority 3: Use Homebrew
-    if shutil.which('brew'):
+    if False: # shutil.which('brew')::
         print("Using Homebrew...")
         
         try:
@@ -766,8 +766,7 @@ def update_python_macos(version_str: str) -> bool:
                 print(f"Homebrew formula '{formula_name}' may not be available.")
                 print(f"Homebrew typically installs the latest patch version of {major_minor}.")
                 print("\nAlternative: Install via official installer from python.org")
-                url_version = version_str.replace('.', '-')
-                print(f"  https://www.python.org/downloads/release/python-{url_version}/")
+                print(f"  https://www.python.org/ftp/python/{version_str}/python-{version_str}-macos11.pkg")
                 return False
             
         except FileNotFoundError:
@@ -780,8 +779,7 @@ def update_python_macos(version_str: str) -> bool:
     # No package manager found
     print("No package manager found (mise, pyenv, or Homebrew).")
     print("\nOption 1: Install via official installer")
-    url_version = version_str.replace('.', '-')
-    print(f"  https://www.python.org/downloads/release/python-{url_version}/")
+    print(f"  https://www.python.org/ftp/python/{version_str}/python-{version_str}-macos11.pkg")
     
     print("\nOption 2: Install mise (recommended)")
     print("  curl https://mise.run | sh")
