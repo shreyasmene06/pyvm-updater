@@ -103,7 +103,7 @@ def get_installed_python_versions() -> List[dict]:
                 for line in result.stdout.strip().split('\n'):
                     # Format: " -V:3.12 *" or " -3.12-64"
                     line = line.strip()
-                    match = re.search(r'-(\d+\.\d+)', line)
+                    match = re.search(r'-(?:V:)?(\d+\.\d+)', line)
                     if match:
                         ver = match.group(1)
                         is_default = '*' in line
@@ -831,6 +831,34 @@ def remove_python_windows(version_str: str) -> bool:
     
     # Try using the py launcher to find the installation
     try:
+        # Check if installed via Microsoft Store
+        # Store versions are usually managed by the OS and can't be easily uninstalled via CLI
+        try:
+            result = subprocess.run(['where', 'python'], capture_output=True, text=True, check=False)
+            if 'WindowsApps' in result.stdout:
+                # Get the version of the one in WindowsApps
+                store_python = None
+                for line in result.stdout.strip().split('\n'):
+                    if 'WindowsApps' in line:
+                        store_python = line.strip()
+                        break
+                
+                if store_python:
+                    try:
+                        ver_check = subprocess.run([store_python, '--version'], capture_output=True, text=True, check=False)
+                        if version_str in ver_check.stdout:
+                            print(f"\n⚠️  Detected Python {version_str} was installed via the Microsoft Store.")
+                            print("Microsoft Store apps MUST be uninstalled via Windows Settings or the Store app.")
+                            print("\nTo remove it:")
+                            print("1. Open 'Settings' > 'Apps' > 'Installed Apps'")
+                            print(f"2. Search for 'Python {version_str}'")
+                            print("3. Click the three dots (...) and select 'Uninstall'")
+                            return False
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         # We look for the specific version to get its uninstall string if possible
         # However, Windows usually requires the original installer or the Add/Remove Programs entry
         # A common way is to call the installer with /uninstall /quiet
@@ -840,12 +868,8 @@ def remove_python_windows(version_str: str) -> bool:
         temp_dir = tempfile.gettempdir()
         installer_path = os.path.join(temp_dir, f"python-{version_str}-uninstall.exe")
         
-        # To uninstall safely, we often need the installer. 
-        # For simplicity in this CLI, we'll try to use the py launcher if it's a minor version,
-        # but for a full removal, we'll suggest the standard Windows way if we can't automate it.
-        
         print(f"To remove Python {version_str} on Windows, it is recommended to use 'Add or Remove Programs'.")
-        print("Attempting automated removal...")
+        print("Attempting automated removal for Python.org installation...")
         
         # Construct the same URL used for installation to use the installer's uninstall feature
         parts = version_str.split('.')
@@ -859,6 +883,8 @@ def remove_python_windows(version_str: str) -> bool:
             print(f"Downloading installer to perform uninstallation...")
             if not download_file(installer_url, installer_path):
                 print("Could not download installer for uninstallation.")
+                print("\n💡 Fallback: If you installed Python via the Microsoft Store or another manager,")
+                print("please use 'Add or Remove Programs' in Windows Settings.")
                 return False
         
         print(f"Running uninstaller for {version_str}...")
@@ -866,13 +892,21 @@ def remove_python_windows(version_str: str) -> bool:
         
         if result.returncode == 0:
             print(f"Successfully initiated removal of Python {version_str}")
+            print("Note: The uninstaller may still be running in the background.")
             return True
         else:
             print(f"Uninstaller exited with code {result.returncode}")
+            print("\n💡 Fallback: Automated removal failed.")
+            print(f"To manually remove Python {version_str}:")
+            print("1. Open 'Settings' > 'Apps' > 'Installed Apps' (or 'Add or Remove Programs' in Control Panel)")
+            print(f"2. Search for 'Python {version_str}'")
+            print("3. Click 'Uninstall'")
+            print("\nIf you installed Python via the Microsoft Store, you MUST use the Store or Settings app to remove it.")
             return False
             
     except Exception as e:
         print(f"Error during Windows removal: {e}")
+        print("\n💡 Tip: If automated removal fails, please use 'Add or Remove Programs' in Windows Settings.")
         return False
 
 
@@ -905,11 +939,49 @@ def remove_python_linux(version_str: str) -> bool:
     if shutil.which('apt'):
         parts = version_str.split('.')
         major_minor = f"{parts[0]}.{parts[1]}"
+        
+        # Safety check: Is this the system's default python3?
         try:
-            print(f"Attempting to remove python{major_minor} via apt...")
-            subprocess.run(["sudo", "apt", "remove", "-y", f"python{major_minor}", f"python{major_minor}-venv"], check=False)
-            print(f"Successfully removed Python {major_minor} via apt")
-            return True
+            sys_python_ver = subprocess.check_output(["python3", "--version"], text=True).strip().split()[-1]
+            sys_parts = sys_python_ver.split('.')
+            if sys_parts[0] == parts[0] and sys_parts[1] == parts[1]:
+                print(f"⚠️  CRITICAL: python{major_minor} appears to be the system's default Python version.")
+                print("Removing system Python WILL break your operating system (Ubuntu/Debian).")
+                print("Skipping apt removal for safety.")
+                return False
+        except Exception:
+            pass
+
+        # Verify if installed via apt and if it's a known non-system package
+        try:
+            result = subprocess.run(["dpkg", "-l", f"python{major_minor}"], capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                print(f"python{major_minor} is not installed via apt. Skipping apt removal.")
+            else:
+                # Check if it's a core package (e.g. just 'python3' or 'python3-minimal')
+                # Most deadsnakes packages are named python3.x
+                if major_minor == "3.10" and platform.freedesktop_os_release().get('VERSION_CODENAME') == 'jammy':
+                     print(f"⚠️  CRITICAL: python{major_minor} is the core Python for Ubuntu 22.04.")
+                     print("Refusing to remove core system package.")
+                     return False
+                
+                print(f"⚠️  WARNING: You are about to remove python{major_minor} via apt.")
+                print("This will require sudo privileges and could affect other applications.")
+                print("Ensure you know what you are doing before providing your password.")
+                
+                # Check for interactive confirmation if possible
+                print(f"\nAttempting to remove python{major_minor} via apt...")
+                # We add a small delay to give user time to read the warning
+                time.sleep(2)
+                
+                result = subprocess.run(["sudo", "apt", "remove", "-y", f"python{major_minor}", f"python{major_minor}-venv"], check=False)
+                
+                if result.returncode == 0:
+                    print(f"Successfully removed Python {major_minor} via apt")
+                    return True
+                else:
+                    print(f"Failed to remove Python {major_minor} via apt (Error code: {result.returncode})")
+                    return False
         except Exception as e:
             print(f"Error removing via apt: {e}")
             
@@ -1177,9 +1249,58 @@ def remove(version, yes):
         
         local_ver = platform.python_version()
         
-        # Prevent removing current python
-        if local_ver == version:
-            click.echo(f"Error: Cannot remove Python {version} because it is currently being used by this tool.")
+        # Prevent removing current python (compare major.minor)
+        local_ver = platform.python_version()
+        local_parts = local_ver.split('.')
+        version_parts = version.split('.')
+        
+        is_same_major_minor = False
+        if len(local_parts) >= 2 and len(version_parts) >= 2:
+            if local_parts[0] == version_parts[0] and local_parts[1] == version_parts[1]:
+                is_same_major_minor = True
+        
+        if is_same_major_minor or local_ver == version:
+            click.echo(f"Error: Cannot remove Python {version} because it matches the major.minor version of the Python currently running this tool ({local_ver}).")
+            click.echo("Removing the active Python version is not supported as it would break the current process.")
+            sys.exit(1)
+        
+        # Check if the version is actually installed
+        installed_versions = get_installed_python_versions()
+        is_installed = False
+        
+        # Normalize target version for comparison
+        target_version = version
+        target_parts = version.split('.')
+        
+        for v in installed_versions:
+            v_str = v['version']
+            v_parts = v_str.split('.')
+            
+            # Exact match
+            if v_str == target_version:
+                is_installed = True
+                break
+                
+            # Match major.minor if only major.minor was provided (e.g. remove 3.12)
+            if len(target_parts) == 2:
+                if len(v_parts) >= 2 and v_parts[0] == target_parts[0] and v_parts[1] == target_parts[1]:
+                    is_installed = True
+                    # Update version to the full version found for the removal process
+                    # if it's more specific than what was provided
+                    if len(v_parts) > len(target_parts):
+                        version = v_str
+                    break
+            
+            # Match if provided version is more specific than installed (e.g. remove 3.8.10 but py --list only shows 3.8)
+            if len(target_parts) > len(v_parts) and len(v_parts) == 2:
+                if target_parts[0] == v_parts[0] and target_parts[1] == v_parts[1]:
+                    is_installed = True
+                    # Keep the more specific version (3.8.10) for the removal process
+                    break
+        
+        if not is_installed:
+            click.echo(f"Error: Python {version} does not appear to be installed.")
+            click.echo("Use 'pyvm list' to see installed versions.")
             sys.exit(1)
         
         os_name, _ = get_os_info()
