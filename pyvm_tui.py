@@ -99,9 +99,20 @@ class InstalledList(ListView):
     def action_remove_selected(self) -> None:
         if self.highlighted_child and isinstance(self.highlighted_child, VersionItem):
             version = self.highlighted_child.version
-            if self.highlighted_child.is_current:
+            
+            # Prevent removing current python (major.minor check)
+            local_ver = platform.python_version()
+            local_parts = local_ver.split('.')
+            version_parts = version.split('.')
+            
+            is_same_major_minor = False
+            if len(local_parts) >= 2 and len(version_parts) >= 2:
+                if local_parts[0] == version_parts[0] and local_parts[1] == version_parts[1]:
+                    is_same_major_minor = True
+
+            if self.highlighted_child.is_current or is_same_major_minor:
                 self.app.bell()
-                self.screen.query_one("#status-bar").set_message(f"Cannot remove current Python {version}", "red")
+                self.screen.query_one("#status-bar").set_message(f"Cannot remove Python {version} (matches running major.minor)", "red")
                 return
             self.screen.start_remove(version)
 
