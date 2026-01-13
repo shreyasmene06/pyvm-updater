@@ -7,9 +7,10 @@ Verifies system requirements and dependencies before installation
 import platform
 import subprocess
 import sys
+from typing import Dict
 
 
-def check_python_version():
+def check_python_version() -> bool:
     """Check if Python version meets minimum requirements"""
     print("✓ Checking Python version...")
     version = sys.version_info
@@ -22,7 +23,7 @@ def check_python_version():
         return False
 
 
-def check_pip():
+def check_pip() -> bool:
     """Check if pip is installed"""
     print("✓ Checking pip...")
     try:
@@ -31,14 +32,14 @@ def check_pip():
         return True
     except subprocess.CalledProcessError:
         print("  ✗ pip is not installed!")
-        print("    Install with: python -m ensurepip --upgrade")
+        print("    Install with: python -m ensure pip --upgrade")
         return False
     except Exception as e:
         print(f"  ✗ Error checking pip: {e}")
         return False
 
 
-def check_internet():
+def check_internet() -> bool:
     """Check basic internet connectivity"""
     print("✓ Checking internet connectivity...")
     try:
@@ -53,10 +54,15 @@ def check_internet():
         return False
 
 
-def check_existing_dependencies():
+def check_existing_dependencies() -> Dict[str, bool]:
     """Check if required packages are already installed"""
     print("✓ Checking existing dependencies...")
-    packages = {"requests": False, "beautifulsoup4": False, "packaging": False, "click": False}
+    packages :dict[str, bool] = {
+        "requests": False,
+        "beautifulsoup4": False,
+        "packaging": False,
+        "click": False
+    }
 
     for package in packages:
         try:
@@ -70,7 +76,7 @@ def check_existing_dependencies():
     return packages
 
 
-def check_permissions():
+def check_permissions() -> bool:
     """Check if user has permission to install packages"""
     print("✓ Checking installation permissions...")
 
@@ -96,7 +102,7 @@ def check_permissions():
         return True
 
 
-def check_os_support():
+def check_os_support() -> bool:
     """Check if OS is supported"""
     print("✓ Checking operating system...")
     os_name = platform.system()
@@ -132,14 +138,14 @@ def check_os_support():
         return False
 
 
-def main():
+def main() -> int:
     """Run all checks"""
     print("=" * 60)
     print("  Python Version Manager - Pre-Installation Check")
     print("=" * 60)
     print()
 
-    checks = {
+    checks : Dict[str, bool]= {
         "Python version": check_python_version(),
         "pip": check_pip(),
         "Internet": check_internet(),
