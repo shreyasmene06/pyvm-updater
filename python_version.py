@@ -20,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Optional
+from typing import Optional, Tuple, List, Dict
 
 try:
     import click
@@ -789,6 +789,315 @@ def update_python_macos(version_str: str) -> bool:
                 pass
 
 
+def is_python_version_installed(version_str: str) -> bool:
+    """Check if a specific Python version is installed on the system"""
+    installed = get_installed_python_versions()
+    
+    # 1. Try exact match
+    if any(v["version"] == version_str for v in installed):
+        return True
+        
+    # 2. Try major.minor match (especially for Windows where 'py --list' returns only major.minor)
+    try:
+        parts = version_str.split(".")
+        if len(parts) >= 2:
+            major_minor = f"{parts[0]}.{parts[1]}"
+            return any(v["version"] == major_minor for v in installed)
+    except (ValueError, IndexError):
+        pass
+        
+    return False
+
+
+def remove_python_windows(version_str: str) -> bool:
+    """
+    Remove Python on Windows.
+    Assumes it was installed using the official Python.org installer.
+    """
+    print(f"\n[Windows] Attempting to remove Python {version_str}...")
+
+    # Validation step
+    if not is_python_version_installed(version_str):
+        print(f"Error: Python {version_str} is not installed.")
+        return False
+
+    # Check if it's the running version (major.minor comparison)
+    current_ver = platform.python_version()
+    current_parts = current_ver.split(".")
+    target_parts = version_str.split(".")
+
+    if len(current_parts) >= 2 and len(target_parts) >= 2:
+        if current_parts[0] == target_parts[0] and current_parts[1] == target_parts[1]:
+            print(f"Error: Cannot remove Python {version_str} as it matches the currently running major.minor version ({current_ver}).")
+            return False
+
+    # Try to find the installer in temp directory
+    temp_dir = tempfile.gettempdir()
+    installer_path = os.path.join(temp_dir, f"python-{version_str}-installer.exe")
+
+    # Fallback message for Windows
+    fallback_msg = (
+        "\n[Notice] Automated uninstallation on Windows encountered issues.\n"
+        "If you installed Python via the Microsoft Store, please remove it manually via:\n"
+        "Windows Settings -> Apps -> Installed apps -> Python -> Uninstall."
+    )
+
+    # Priority 1: Try winget (handles MS Store and many installers)
+    if shutil.which("winget"):
+        print(f"Attempting to uninstall via winget...")
+        # MS Store IDs usually follow: PythonSoftwareFoundation.Python.3.X
+        # We try both the generic name and potential MS Store ID
+        major_minor = ".".join(version_str.split(".")[:2])
+        potential_ids = [
+            f"Python.Python.{major_minor}",
+            f"PythonSoftwareFoundation.Python.{major_minor}"
+        ]
+        
+        for pkg_id in potential_ids:
+            try:
+                # --silent --accept-source-agreements --accept-package-agreements
+                result = subprocess.run(
+                    ["winget", "uninstall", "--id", pkg_id, "--silent"],
+                    capture_output=True, text=True, check=False
+                )
+                if result.returncode == 0:
+                    print(f"[OK] Python {version_str} removed via winget ({pkg_id})")
+                    return True
+            except Exception:
+                continue
+
+    # Priority 2: Try PowerShell for Microsoft Store (if winget failed or not present)
+    major_minor = ".".join(version_str.split(".")[:2])
+    print(f"Checking for Microsoft Store installation (Python {major_minor})...")
+    ps_check = (
+        f'Get-AppxPackage | Where-Object {{$_.Name -like "*Python.{major_minor}*"}} | '
+        'Select-Object -ExpandProperty PackageFullName'
+    )
+    try:
+        check_result = subprocess.run(
+            ["powershell", "-Command", ps_check],
+            capture_output=True, text=True, check=False
+        )
+        package_fullname = check_result.stdout.strip()
+        
+        if package_fullname:
+            print(f"Found Microsoft Store package: {package_fullname}")
+            print("Attempting to remove via PowerShell...")
+            remove_command = f'Remove-AppxPackage -Package "{package_fullname}"'
+            remove_result = subprocess.run(
+                ["powershell", "-Command", remove_command],
+                capture_output=True, text=True, check=False
+            )
+            
+            if remove_result.returncode == 0:
+                print(f"[OK] Python {version_str} (MS Store) removed successfully!")
+                return True
+            else:
+                print(f"PowerShell removal failed: {remove_result.stderr.strip()}")
+    except Exception as e:
+        print(f"Error checking Microsoft Store packages: {e}")
+
+    # Priority 3: Use official installer if available
+    if not os.path.exists(installer_path):
+        print("\nInstaller not found in temporary directory.")
+        print("Attempting to download the matching installer for removal...")
+        
+        # Detect architecture
+        machine = platform.machine().lower()
+        if machine in ["amd64", "x86_64"]:
+            arch = "amd64"
+        elif machine in ["arm64", "aarch64"]:
+            arch = "arm64"
+        else:
+            arch = "win32"
+            
+        installer_url = f"https://www.python.org/ftp/python/{version_str}/python-{version_str}-{arch}.exe"
+        print(f"Downloading from: {installer_url}")
+        
+        if not download_file(installer_url, installer_path):
+            print("Failed to download installer.")
+            print(fallback_msg)
+            return False
+
+    print(f"Running uninstaller: {installer_path} /uninstall")
+    try:
+        # Run uninstaller (interactive)
+        result = subprocess.run([installer_path, "/uninstall"], check=False)
+        
+        # Cleanup downloaded installer after use
+        try:
+            if os.path.exists(installer_path):
+                os.remove(installer_path)
+        except OSError:
+            pass
+            
+        if result.returncode == 0:
+            print(f"\n[OK] Python {version_str} removed successfully!")
+            return True
+        else:
+            print(f"Warning: Uninstaller exited with code {result.returncode}")
+            print(fallback_msg)
+            return False
+    except Exception as e:
+        print(f"Error during uninstallation: {e}")
+        print(fallback_msg)
+        return False
+
+
+def remove_python_linux(version_str: str) -> bool:
+    """
+    Remove Python on Linux.
+    Supports apt removal with safety checks.
+    """
+    print(f"\n[Linux] Attempting to remove Python {version_str}...")
+
+    # Validation step
+    if not is_python_version_installed(version_str):
+        print(f"Error: Python {version_str} is not installed.")
+        return False
+
+    # Major/minor comparison for safety
+    try:
+        parts = version_str.split(".")
+        major_minor = f"{parts[0]}.{parts[1]}"
+        current_parts = platform.python_version().split(".")
+        current_major_minor = f"{current_parts[0]}.{current_parts[1]}"
+
+        if major_minor == current_major_minor:
+            print(f"Error: Cannot remove Python {version_str} as it matches the currently running major.minor version.")
+            return False
+    except (ValueError, IndexError):
+        pass
+
+    # Safety check: Don't remove if it's the system Python
+    system_python_path = "/usr/bin/python3"
+    if os.path.exists(system_python_path):
+        try:
+            result = subprocess.run([system_python_path, "--version"], capture_output=True, text=True, check=False)
+            if result.returncode == 0:
+                system_ver = result.stdout.strip().replace("Python ", "")
+                system_parts = system_ver.split(".")
+                if len(system_parts) >= 2:
+                    system_major_minor = f"{system_parts[0]}.{system_parts[1]}"
+                    if major_minor == system_major_minor:
+                        print(f"CRITICAL WARNING: Python {major_minor} appears to be the system Python.")
+                        print("Removing it may break your operating system (package managers, GUI, etc.).")
+                        print("Aborting for safety.")
+                        return False
+        except Exception:
+            pass
+
+    # Try mise
+    if shutil.which("mise"):
+        try:
+            result = subprocess.run(["mise", "uninstall", f"python@{version_str}"], check=False)
+            if result.returncode == 0:
+                print(f"[OK] Python {version_str} uninstalled via mise.")
+                return True
+        except Exception:
+            pass
+
+    # Try pyenv
+    if shutil.which("pyenv"):
+        try:
+            result = subprocess.run(["pyenv", "uninstall", "-f", version_str], check=False)
+            if result.returncode == 0:
+                print(f"[OK] Python {version_str} uninstalled via pyenv.")
+                return True
+        except Exception:
+            pass
+
+    # Use apt (with safety checks and warnings)
+    if shutil.which("apt"):
+        pkg_name = f"python{major_minor}"
+        try:
+            # Check if installed via apt
+            check_pkg = subprocess.run(["dpkg", "-l", pkg_name], capture_output=True, text=True, check=False)
+            if check_pkg.returncode == 0:
+                print(f"\n⚠️  WARNING: You are about to remove '{pkg_name}' using apt.")
+                print("   This is a system-wide package and removal requires sudo.")
+                print("   Ensure this is not a critical system package.")
+
+                if not click.confirm("Do you want to proceed?"):
+                    print("Removal cancelled.")
+                    return False
+
+                print(f"Removing {pkg_name}...")
+                subprocess.run(["sudo", "apt", "remove", "-y", pkg_name], check=False)
+                subprocess.run(["sudo", "apt", "autoremove", "-y"], check=False)
+                return True
+        except Exception as e:
+            print(f"Error during apt removal: {e}")
+
+    print("\nCould not find a safe automated way to remove this Python installation.")
+    print("Please remove it manually using your package manager.")
+    return False
+
+
+def remove_python_macos(version_str: str) -> bool:
+    """
+    Remove Python on macOS.
+    Defers risky cases to manual removal.
+    """
+    print(f"\n[macOS] Attempting to remove Python {version_str}...")
+
+    # Validation step
+    if not is_python_version_installed(version_str):
+        print(f"Error: Python {version_str} is not installed.")
+        return False
+
+    # Check major.minor
+    try:
+        parts = version_str.split(".")
+        major_minor = f"{parts[0]}.{parts[1]}"
+        current_parts = platform.python_version().split(".")
+        current_major_minor = f"{current_parts[0]}.{current_parts[1]}"
+
+        if major_minor == current_major_minor:
+            print(f"Error: Cannot remove Python {version_str} as it matches the currently running major.minor version.")
+            return False
+    except (ValueError, IndexError):
+        pass
+
+    # Try mise
+    if shutil.which("mise"):
+        try:
+            result = subprocess.run(["mise", "uninstall", f"python@{version_str}"], check=False)
+            if result.returncode == 0:
+                print(f"[OK] Python {version_str} uninstalled via mise.")
+                return True
+        except Exception:
+            pass
+
+    # Try pyenv
+    if shutil.which("pyenv"):
+        try:
+            result = subprocess.run(["pyenv", "uninstall", "-f", version_str], check=False)
+            if result.returncode == 0:
+                print(f"[OK] Python {version_str} uninstalled via pyenv.")
+                return True
+        except Exception:
+            pass
+
+    # Try Homebrew
+    if shutil.which("brew"):
+        try:
+            pkg_name = f"python@{major_minor}"
+            check_brew = subprocess.run(["brew", "list", pkg_name], capture_output=True, text=True, check=False)
+            if check_brew.returncode == 0:
+                print(f"Uninstalling {pkg_name} via Homebrew...")
+                subprocess.run(["brew", "uninstall", pkg_name], check=False)
+                return True
+        except Exception:
+            pass
+
+    print("\n[Notice] Automated removal of official Python.org installations on macOS is complex.")
+    print("To safely remove it, please delete the following manually:")
+    print(f"1. /Applications/Python {major_minor}")
+    print(f"2. /Library/Frameworks/Python.framework/Versions/{major_minor}")
+    return False
+
+
 def check_python_version(silent: bool = False) -> Tuple[str, Optional[str], bool]:
     """
     Check local Python version against the latest stable version from python.org
@@ -976,6 +1285,50 @@ def install(version, yes):
             show_python_usage_instructions(version, os_name)
         else:
             click.echo("\nInstallation encountered issues. Check messages above.")
+            sys.exit(1)
+
+    except KeyboardInterrupt:
+        click.echo("\n\nOperation cancelled.")
+        sys.exit(130)
+    except Exception as e:
+        click.echo(f"\nError: {e}")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("version")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
+def remove(version, yes):
+    """Remove a specific Python version"""
+    try:
+        # Validate version format
+        if not validate_version_string(version):
+            click.echo(f"Error: Invalid version format: {version}")
+            sys.exit(1)
+
+        os_name, _ = get_os_info()
+
+        # Confirm removal
+        if not yes:
+            if not click.confirm(f"\nAre you sure you want to remove Python {version}?"):
+                click.echo("Removal cancelled.")
+                sys.exit(0)
+
+        success = False
+        if os_name == "windows":
+            success = remove_python_windows(version)
+        elif os_name == "linux":
+            success = remove_python_linux(version)
+        elif os_name == "darwin":
+            success = remove_python_macos(version)
+        else:
+            click.echo(f"Unsupported operating system: {os_name}")
+            sys.exit(1)
+
+        if success:
+            click.echo(f"\nSuccessfully removed Python {version}")
+        else:
+            click.echo("\nRemoval encountered issues. Check messages above.")
             sys.exit(1)
 
     except KeyboardInterrupt:
