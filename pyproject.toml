@@ -1,0 +1,134 @@
+# ============================================
+# pyproject.toml - Project Configuration
+# ============================================
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.ruff]
+# Same as Black
+line-length = 120
+target-version = "py39"
+
+# Exclude common directories
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.lint]
+# Enable pycodestyle (E), Pyflakes (F), isort (I), bugbear (B), comprehensions (C4)
+select = ["E", "F", "I", "B", "C4", "UP", "SIM"]
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "B008",  # Do not perform function calls in argument defaults
+    "B905",  # zip() without explicit strict=
+    "SIM102",  # Use a single if statement instead of nested if statements
+    "SIM105",  # Use contextlib.suppress instead of try-except-pass
+    "SIM108",  # Use ternary operator instead of if-else block
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["python_version", "pyvm_tui"]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+# Indent with spaces
+indent-style = "space"
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+# Format docstrings
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Start lenient, make stricter over time
+disallow_incomplete_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = "textual.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "bs4.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "setup.py",
+    ".venv/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+fail_under = 0  # Set to higher value once you have tests
+
+[tool.bandit]
+exclude_dirs = [".venv", "dist", ".git", "pyvm_updater.egg-info", "tests"]
+skips = ["B101"]  # Skip assert warnings in tests

@@ -4,9 +4,9 @@ Pre-installation checker for Python Version Manager
 Verifies system requirements and dependencies before installation
 """
 
-import sys
-import subprocess
 import platform
+import subprocess
+import sys
 
 
 def check_python_version():
@@ -26,12 +26,7 @@ def check_pip():
     """Check if pip is installed"""
     print("✓ Checking pip...")
     try:
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "--version"],
-            capture_output=True,
-            text=True,
-            check=True
-        )
+        result = subprocess.run([sys.executable, "-m", "pip", "--version"], capture_output=True, text=True, check=True)
         print(f"  ✓ pip is installed: {result.stdout.strip()}")
         return True
     except subprocess.CalledProcessError:
@@ -48,6 +43,7 @@ def check_internet():
     print("✓ Checking internet connectivity...")
     try:
         import socket
+
         socket.create_connection(("www.python.org", 443), timeout=5)
         print("  ✓ Internet connection OK")
         return True
@@ -60,13 +56,8 @@ def check_internet():
 def check_existing_dependencies():
     """Check if required packages are already installed"""
     print("✓ Checking existing dependencies...")
-    packages = {
-        "requests": False,
-        "beautifulsoup4": False,
-        "packaging": False,
-        "click": False
-    }
-    
+    packages = {"requests": False, "beautifulsoup4": False, "packaging": False, "click": False}
+
     for package in packages:
         try:
             __import__(package if package != "beautifulsoup4" else "bs4")
@@ -75,28 +66,30 @@ def check_existing_dependencies():
         except ImportError:
             print(f"  ○ {package} will be installed")
             packages[package] = False
-    
+
     return packages
 
 
 def check_permissions():
     """Check if user has permission to install packages"""
     print("✓ Checking installation permissions...")
-    
+
     # Try to check site-packages location
     try:
         import site
+
         site_packages = site.getsitepackages()
         print(f"  ○ Will install to: {site_packages[0] if site_packages else 'default location'}")
-        
+
         # On Unix systems, check if we need sudo
-        if platform.system().lower() in ['linux', 'darwin']:
+        if platform.system().lower() in ["linux", "darwin"]:
             import os
-            if not os.access(site_packages[0] if site_packages else '/usr/local', os.W_OK):
+
+            if not os.access(site_packages[0] if site_packages else "/usr/local", os.W_OK):
                 print("  ⚠ May require sudo for system-wide installation")
                 print("    Consider using: pip install --user")
                 return False
-        
+
         return True
     except Exception as e:
         print(f"  ⚠ Could not check permissions: {e}")
@@ -107,7 +100,7 @@ def check_os_support():
     """Check if OS is supported"""
     print("✓ Checking operating system...")
     os_name = platform.system()
-    
+
     if os_name == "Windows":
         print(f"  ✓ Windows detected: {platform.release()}")
         return True
@@ -115,11 +108,12 @@ def check_os_support():
         print(f"  ✓ Linux detected: {platform.release()}")
         # Check for package managers
         import shutil
-        if shutil.which('apt'):
+
+        if shutil.which("apt"):
             print("    - apt package manager found")
-        elif shutil.which('dnf'):
+        elif shutil.which("dnf"):
             print("    - dnf package manager found")
-        elif shutil.which('yum'):
+        elif shutil.which("yum"):
             print("    - yum package manager found")
         else:
             print("    ⚠ No supported package manager found")
@@ -127,7 +121,8 @@ def check_os_support():
     elif os_name == "Darwin":
         print(f"  ✓ macOS detected: {platform.mac_ver()[0]}")
         import shutil
-        if shutil.which('brew'):
+
+        if shutil.which("brew"):
             print("    - Homebrew found")
         else:
             print("    ⚠ Homebrew not found (recommended for easy updates)")
@@ -143,7 +138,7 @@ def main():
     print("  Python Version Manager - Pre-Installation Check")
     print("=" * 60)
     print()
-    
+
     checks = {
         "Python version": check_python_version(),
         "pip": check_pip(),
@@ -151,18 +146,18 @@ def main():
         "OS support": check_os_support(),
         "Permissions": check_permissions(),
     }
-    
+
     # Check dependencies (informational only)
     packages = check_existing_dependencies()
-    
+
     print()
     print("=" * 60)
     print("  Summary")
     print("=" * 60)
-    
+
     critical_checks = ["Python version", "pip", "OS support"]
     all_critical_passed = all(checks[check] for check in critical_checks if check in checks)
-    
+
     if all_critical_passed:
         print("✓ All critical checks passed!")
         print()
@@ -172,25 +167,25 @@ def main():
         print("Or for user-only installation:")
         print("  pip install --user -e .")
         print()
-        
+
         missing_packages = [pkg for pkg, installed in packages.items() if not installed]
         if missing_packages:
-            print(f"The following packages will be installed automatically:")
+            print("The following packages will be installed automatically:")
             for pkg in missing_packages:
                 print(f"  - {pkg}")
-        
+
         return 0
     else:
         print("✗ Some critical checks failed!")
         print()
         print("Please fix the issues above before installing.")
-        
+
         failed = [check for check, passed in checks.items() if not passed and check in critical_checks]
         if failed:
             print("\nFailed checks:")
             for check in failed:
                 print(f"  - {check}")
-        
+
         return 1
 
 
