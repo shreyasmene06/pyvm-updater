@@ -32,7 +32,7 @@ def check_pip() -> bool:
         return True
     except subprocess.CalledProcessError:
         print("  ✗ pip is not installed!")
-        print("    Install with: python -m ensure pip --upgrade")
+        print("    Install with: python -m ensurepip --upgrade")
         return False
     except Exception as e:
         print(f"  ✗ Error checking pip: {e}")
