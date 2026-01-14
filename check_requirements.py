@@ -7,7 +7,6 @@ Verifies system requirements and dependencies before installation
 import platform
 import subprocess
 import sys
-from typing import Dict
 
 
 def check_python_version() -> bool:
@@ -54,15 +53,10 @@ def check_internet() -> bool:
         return False
 
 
-def check_existing_dependencies() -> Dict[str, bool]:
+def check_existing_dependencies() -> dict[str, bool]:
     """Check if required packages are already installed"""
     print("✓ Checking existing dependencies...")
-    packages :dict[str, bool] = {
-        "requests": False,
-        "beautifulsoup4": False,
-        "packaging": False,
-        "click": False
-    }
+    packages: dict[str, bool] = {"requests": False, "beautifulsoup4": False, "packaging": False, "click": False}
 
     for package in packages:
         try:
@@ -145,7 +139,7 @@ def main() -> int:
     print("=" * 60)
     print()
 
-    checks : Dict[str, bool]= {
+    checks: dict[str, bool] = {
         "Python version": check_python_version(),
         "pip": check_pip(),
         "Internet": check_internet(),
