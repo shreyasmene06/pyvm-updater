@@ -12,6 +12,7 @@ Requirements:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
@@ -89,6 +90,48 @@ class HistoryManager:
         if not history:
             return None
         return history[-1]
+
+
+def calculate_sha256(file_path: str) -> str:
+    """Calculate SHA256 checksum of a file"""
+    sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
+def fetch_remote_sha256(checksum_url: str) -> str | None:
+    """Fetch SHA256 checksum from python.org"""
+    try:
+        response = requests.get(checksum_url, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        # Format: "<hash>  filename"
+        return response.text.strip().split()[0]
+    except Exception as e:
+        click.echo(f"❌ Failed to fetch checksum: {e}")
+        return None
+
+
+def verify_file_checksum(file_path: str, checksum_url: str) -> bool:
+    """Verify downloaded file against python.org SHA256"""
+    click.echo("🔐 Verifying file integrity (SHA256)...")
+
+    expected = fetch_remote_sha256(checksum_url)
+    if not expected:
+        click.echo("❌ Could not retrieve official checksum")
+        return False
+
+    actual = calculate_sha256(file_path)
+
+    if actual.lower() != expected.lower():
+        click.echo("❌ Checksum mismatch!")
+        click.echo(f"Expected: {expected}")
+        click.echo(f"Actual:   {actual}")
+        return False
+
+    click.echo("✅ Integrity verified")
+    return True
 
 
 def get_os_info():
@@ -554,7 +597,15 @@ def update_python_windows(version_str: str) -> bool:
     print(f"Downloading from: {installer_url}")
     if not download_file(installer_url, installer_path):
         return False
+    checksum_url = installer_url + ".sha256"
 
+    if not verify_file_checksum(installer_path, checksum_url):
+        click.echo("❌ Aborting installation due to integrity check failure")
+        try:
+            os.remove(installer_path)
+        except OSError:
+            pass
+        return False
     print("\n⚠️  Starting installer...")
     print("Please follow the installer prompts.")
     print("Recommendation: Check 'Add Python to PATH'")
@@ -587,6 +638,81 @@ def update_python_windows(version_str: str) -> bool:
             print(f"Warning: Could not delete temporary file {installer_path} (permission denied)")
         except OSError as e:
             print(f"Warning: Could not delete temporary file {installer_path}: {e}")
+
+
+def install_pyenv_linux() -> bool:
+    """Install pyenv on Linux (yum/dnf systems)"""
+    print("\n[Linux] Installing pyenv...")
+
+    if not shutil.which("curl"):
+        print("Error: 'curl' is required to install pyenv. Please install it first.")
+        return False
+
+    if not shutil.which("bash"):
+        print("Error: 'bash' is required to install pyenv. Please install it first.")
+        return False
+
+    pkg_mgr = "dnf" if shutil.which("dnf") else "yum"
+
+    # 1. Install dependencies
+    print(f"Installing build dependencies via {pkg_mgr}...")
+    # Common dependencies for building Python on RHEL/CentOS/Fedora
+    deps = [
+        "git",
+        "gcc",
+        "zlib-devel",
+        "bzip2-devel",
+        "readline-devel",
+        "sqlite-devel",
+        "openssl-devel",
+        "xz-devel",
+        "libffi-devel",
+        "findutils",
+    ]
+
+    try:
+        # Check if sudo is available
+        if shutil.which("sudo"):
+            subprocess.run(["sudo", pkg_mgr, "install", "-y"] + deps, check=True)
+        else:
+            print("Warning: 'sudo' not found. Trying to install without it...")
+            subprocess.run([pkg_mgr, "install", "-y"] + deps, check=True)
+    except Exception as e:
+        print(f"Error installing dependencies: {e}")
+        print("You might need to install them manually: sudo {} install -y {}".format(pkg_mgr, " ".join(deps)))
+        return False
+
+    # 2. Run pyenv-installer
+    print("Running pyenv-installer (https://pyenv.run)...")
+    try:
+        # Avoid shell=True for security (satisfies bandit B602)
+        # We use requests to get the script and pipe it to bash
+        response = requests.get("https://pyenv.run", timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+        subprocess.run(["bash"], input=response.text, text=True, check=True)
+    except Exception as e:
+        print(f"Error running pyenv-installer: {e}")
+        return False
+
+    # 3. Update the current process's PATH so we can use pyenv immediately
+    pyenv_root = os.path.expanduser("~/.pyenv")
+    os.environ["PYENV_ROOT"] = pyenv_root
+
+    # Construct new PATH
+    bin_path = os.path.join(pyenv_root, "bin")
+    shim_path = os.path.join(pyenv_root, "shims")
+    os.environ["PATH"] = f"{bin_path}:{shim_path}:" + os.environ.get("PATH", "")
+
+    # 4. Final verification and instructions
+    print("\n[OK] pyenv installed successfully!")
+    print("\nIMPORTANT: To use pyenv in future terminal sessions, add this to your ~/.bashrc or ~/.bash_profile:")
+    print("-" * 60)
+    print('export PYENV_ROOT="$HOME/.pyenv"')
+    print('[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"')
+    print('eval "$(pyenv init -)"')
+    print("-" * 60)
+
+    return True
 
 
 def update_python_linux(version_str: str) -> bool:
@@ -689,8 +815,29 @@ def update_python_linux(version_str: str) -> bool:
     elif shutil.which("dnf") or shutil.which("yum"):
         pkg_mgr = "dnf" if shutil.which("dnf") else "yum"
         print(f"Using {pkg_mgr}...")
-        print(f"\nRun manually: sudo {pkg_mgr} install python3")
-        print("Consider installing mise or pyenv for version control.")
+
+        # Offer to install pyenv automatically
+        print(f"\nSpecific Python versions (like {version_str}) might not be available in {pkg_mgr}.")
+        if click.confirm(f"Would you like to install pyenv automatically to manage Python {version_str}?"):
+            if install_pyenv_linux():
+                # Re-check for pyenv after installation
+                if shutil.which("pyenv"):
+                    print(f"Using newly installed pyenv to install Python {version_str}...")
+                    try:
+                        result = subprocess.run(["pyenv", "install", version_str], check=False, capture_output=False)
+                        if result.returncode == 0:
+                            print(f"\n[OK] Python {version_str} installed via pyenv!")
+                            print("\nTo use this version:")
+                            print(f"  pyenv local {version_str}   # Use in current directory")
+                            print(f"  pyenv global {version_str}  # Set as global default")
+                            return True
+                        else:
+                            print("pyenv installation failed.")
+                    except Exception as e:
+                        print(f"pyenv error: {e}")
+
+        print(f"\nAlternatively, you can try to install manually: sudo {pkg_mgr} install python3")
+        print("Or install mise for version control: https://mise.run")
         return False
 
     else:
