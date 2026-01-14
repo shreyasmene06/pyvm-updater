@@ -23,6 +23,8 @@ except ImportError:
 
 # Import from main module
 from python_version import (
+    HISTORY_FILE,
+    HistoryManager,
     check_python_version,
     get_active_python_releases,
     get_installed_python_versions,
@@ -143,6 +145,7 @@ class MainScreen(Screen):
         Binding("q", "quit", "Quit"),
         Binding("r", "refresh", "Refresh"),
         Binding("u", "update_latest", "Update"),
+        Binding("b", "rollback", "Rollback"),
         Binding("1", "focus_installed", "Installed", show=False),
         Binding("2", "focus_available", "Available", show=False),
         Binding("?", "help", "Help"),
@@ -289,7 +292,7 @@ class MainScreen(Screen):
                 yield Label("Loading...")
 
             yield Static(
-                "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | R: refresh | U: update | Q: quit[/dim]",
+                "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | R: refresh | U: update | B: rollback | Q: quit[/dim]",
                 id="hint-bar",
             )
 
@@ -310,6 +313,7 @@ class MainScreen(Screen):
             with Horizontal(id="button-area"):
                 yield Button("Refresh [R]", id="refresh-btn", variant="default")
                 yield Button("Update [U]", id="update-btn", variant="primary")
+                yield Button("Rollback [B]", id="rollback-btn", variant="warning")
                 yield Button("Quit [Q]", id="quit-btn", variant="error")
 
             yield StatusBar(id="status-bar")
@@ -601,6 +605,8 @@ class MainScreen(Screen):
             self.action_refresh()
         elif event.button.id == "update-btn":
             self.action_update_latest()
+        elif event.button.id == "rollback-btn":
+            self.action_rollback()
         elif event.button.id == "quit-btn":
             self.action_quit()
 
@@ -616,6 +622,85 @@ class MainScreen(Screen):
 
         status_bar.set_message(f"Starting update to Python {self.latest_ver}...", "yellow")
         self.do_install(self.latest_ver)
+
+    def action_rollback(self) -> None:
+        """Handle rollback action"""
+        last_action = HistoryManager.get_last_action()
+        status_bar = self.query_one("#status-bar", StatusBar)
+
+        if not last_action:
+            status_bar.set_message("No rollback history found.", "red")
+            return
+
+        version = last_action["version"]
+        self.run_rollback_with_suspend(version)
+
+    def run_rollback_with_suspend(self, version: str) -> None:
+        """Run rollback with TUI suspended"""
+        import json
+
+        from textual.app import SuspendNotSupported
+
+        os_name, _ = get_os_info()
+        success = False
+
+        def do_rollback():
+            print(f"\n{'='*50}")
+            print(f"Rolling back: Removing Python {version}")
+            print(f"{'='*50}\n")
+
+            if os_name == "windows":
+                return remove_python_windows(version)
+            elif os_name == "linux":
+                return remove_python_linux(version)
+            elif os_name == "darwin":
+                return remove_python_macos(version)
+            else:
+                print(f"Unsupported OS: {os_name}")
+                return False
+
+        try:
+            with self.app.suspend():
+                last_action = HistoryManager.get_last_action()
+                if not last_action:
+                    print("Error: No rollback history found.")
+                else:
+                    action = last_action["action"]
+                    prev_version = last_action.get("previous_version", "unknown")
+                    print(f"Last action: {action} Python {version}")
+                    print(f"Previous version: {prev_version}")
+                    print(f"\nDo you want to rollback by removing Python {version}? (y/n): ", end="", flush=True)
+                    confirm = input().lower()
+
+                    if confirm == "y":
+                        success = do_rollback()
+                        if success:
+                            print("\nRollback complete!")
+                            # Update history file
+                            history = HistoryManager.get_history()
+                            if history:
+                                history.pop()
+                                try:
+                                    with open(HISTORY_FILE, "w") as f:
+                                        json.dump(history, f, indent=2)
+                                except Exception:
+                                    pass
+                        else:
+                            print("\nRollback failed.")
+                    else:
+                        print("\nRollback cancelled.")
+
+                print("\nPress Enter to return to TUI...")
+                try:
+                    input()
+                except EOFError:
+                    pass
+        except SuspendNotSupported:
+            status_bar = self.query_one("#status-bar", StatusBar)
+            status_bar.set_message("Rollback started (check terminal)...", "yellow")
+            success = do_rollback()
+
+        self.refresh_all()
 
     def action_quit(self) -> None:
         self.app.exit()
@@ -751,6 +836,7 @@ class HelpScreen(Screen):
   X         Remove selected version
   R         Refresh data
   U         Update to latest version
+  B         Rollback last action
   ?         This help
   Q         Quit
 
@@ -758,6 +844,7 @@ class HelpScreen(Screen):
   pyvm list      List versions
   pyvm install   Install version
   pyvm update    Update to latest
+  pyvm rollback  Rollback last action
   pyvm check     Check for updates
 """
             yield Static(help_text)

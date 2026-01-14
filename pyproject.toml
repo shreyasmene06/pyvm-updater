@@ -2,6 +2,60 @@
 # pyproject.toml - Project Configuration
 # ============================================
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyvm-updater"
+version = "2.0.1"
+description = "Cross-platform Python version checker and installer (does NOT modify system defaults)"
+readme = "README.md"
+authors = [
+    { name="Shreyas Mene", email="shreyasmene06@gmail.com"}
+]
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.25.0",
+    "beautifulsoup4>=4.9.0",
+    "packaging>=20.0",
+    "click>=8.0.0",
+    "textual>=0.40.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+py-modules = ["python_version", "pyvm_tui"]
+
+[project.urls]
+Repository = "https://github.com/shreyasmene06/pyvm-updater"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov>=2.0",
+    "black>=21.0",
+    "flake8>=3.9",
+    "mypy>=0.900",
+    "textual-dev>=1.0.0",
+]
+
+[project.scripts]
+pyvm = "python_version:main"
+
 [tool.black]
 line-length = 120
 target-version = ['py39', 'py310', 'py311', 'py312']
