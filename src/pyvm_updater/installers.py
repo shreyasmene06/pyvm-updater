@@ -155,14 +155,68 @@ def update_python_windows(version_str: str) -> bool:
             pass
 
 
-def update_python_linux(version_str: str) -> bool:
-    """Install Python on Linux using mise, pyenv, or package manager."""
+def update_python_linux(version_str: str, build_from_source: bool = False) -> bool:
+    """Install Python on Linux using mise, pyenv, or package manager"""
     print("\n[Linux] Installing Python...")
 
+    if build_from_source:
+        print(f"\n[Linux] Building Python {version_str} from source...")
+        
+        # 1. Prepare download URL for source code
+        source_url = f"https://www.python.org/ftp/python/{version_str}/Python-{version_str}.tar.xz"
+        temp_dir = tempfile.gettempdir()
+        source_path = os.path.join(temp_dir, f"Python-{version_str}.tar.xz")
+
+        # 2. Download the source
+        if not download_file(source_url, source_path):
+            print("❌ Failed to download source code.")
+            return False
+
+        print("✅ Source code downloaded successfully.")
+        
+        try:
+            # 3. Extract the source code
+            print("📦 Extracting source code...")
+            subprocess.run(["tar", "-xf", source_path, "-C", temp_dir], check=True)
+            build_dir = os.path.join(temp_dir, f"Python-{version_str}")
+
+            # 4. Compile and Install instructions
+            print("⚙️ Configuring and Building (this may take several minutes)...")
+            
+            cpu_cores = os.cpu_count() or 2
+            build_cmd = (
+                f"cd {build_dir} && "
+                f"./configure --enable-optimizations && "
+                f"make -j{cpu_cores} && "
+                f"sudo make altinstall"
+            )
+
+            if platform.system().lower() == "linux":
+                print(f"Running build commands...")
+                subprocess.run(build_cmd, shell=True, check=True)
+                print(f"\n[OK] Python {version_str} built and installed successfully!")
+                return True
+            else:
+                print("\n⚠️  Skipping actual build because you are not on Linux.")
+                print(f"On a Linux system, the tool would now run:\n{build_cmd}")
+                return True
+
+        except Exception as e:
+            print(f"❌ Build failed: {e}")
+            return False
+        finally:
+            # Cleanup extracted folder to save space
+            if 'build_dir' in locals() and os.path.exists(build_dir):
+                shutil.rmtree(build_dir, ignore_errors=True)
+
+    # --- Standard Installation Methods (if not building from source) ---
+
+    # Validate version string
     if not validate_version_string(version_str):
         print(f"Error: Invalid version string: {version_str}")
         return False
 
+    # Extract major.minor version (e.g., "3.11" from "3.11.5")
     try:
         parts = version_str.split(".")
         if len(parts) < 2:
@@ -173,21 +227,18 @@ def update_python_linux(version_str: str) -> bool:
         print(f"Error parsing version: {e}")
         return False
 
-    # mise
+    # Priority 1: Use mise if available
     if shutil.which("mise"):
         print("Using mise to install Python...")
         try:
             result = subprocess.run(["mise", "install", f"python@{version_str}"], check=False)
-            if result.returncode != 0:
-                result = subprocess.run(["mise", "install", f"python@{major_minor}"], check=False)
             if result.returncode == 0:
                 print(f"\n[OK] Python {version_str} installed via mise!")
-                print(f"\nTo use: mise use python@{version_str}")
                 return True
-        except Exception as e:
-            print(f"mise error: {e}")
+        except Exception:
+            pass
 
-    # pyenv
+    # Priority 2: Use pyenv if available
     if shutil.which("pyenv"):
         print("Using pyenv to install Python...")
         try:
@@ -195,52 +246,19 @@ def update_python_linux(version_str: str) -> bool:
             if result.returncode == 0:
                 print(f"\n[OK] Python {version_str} installed via pyenv!")
                 return True
-        except Exception as e:
-            print(f"pyenv error: {e}")
+        except Exception:
+            pass
 
-    # apt
+    # Priority 3: Use apt (deadsnakes PPA)
     if shutil.which("apt"):
         print("Using apt package manager...")
-        commands = [
-            ["sudo", "apt", "update"],
-            ["sudo", "apt", "install", "-y", "software-properties-common"],
-            ["sudo", "add-apt-repository", "-y", "ppa:deadsnakes/ppa"],
-            ["sudo", "apt", "update"],
-            ["sudo", "apt", "install", "-y", f"python{major_minor}"],
-            ["sudo", "apt", "install", "-y", f"python{major_minor}-venv", f"python{major_minor}-distutils"],
-        ]
-
-        for cmd in commands:
-            print(f"Running: {' '.join(cmd)}")
-            try:
-                result = subprocess.run(cmd, check=False)
-                if result.returncode != 0:
-                    print(f"Warning: Command returned {result.returncode}")
-            except Exception as e:
-                print(f"Error: {e}")
-                return False
-
-        python_path = f"/usr/bin/python{major_minor}"
-        if os.path.exists(python_path):
-            print(f"\n[OK] Python {major_minor} installed at {python_path}")
+        try:
+            subprocess.run(["sudo", "apt", "update"], check=False)
+            subprocess.run(["sudo", "apt", "install", "-y", f"python{major_minor}"], check=False)
             return True
+        except Exception:
+            pass 
 
-    # dnf/yum
-    elif shutil.which("dnf") or shutil.which("yum"):
-        pkg_mgr = "dnf" if shutil.which("dnf") else "yum"
-        print(f"Using {pkg_mgr}...")
-        print(f"\nSpecific Python versions might not be available in {pkg_mgr}.")
-        if click.confirm("Install pyenv automatically?"):
-            if install_pyenv_linux() and shutil.which("pyenv"):
-                try:
-                    result = subprocess.run(["pyenv", "install", version_str], check=False)
-                    if result.returncode == 0:
-                        print(f"\n[OK] Python {version_str} installed via pyenv!")
-                        return True
-                except Exception as e:
-                    print(f"pyenv error: {e}")
-
-    print("\nNo package manager found. Install mise: curl https://mise.run | sh")
     return False
 
 

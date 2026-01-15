@@ -307,12 +307,13 @@ def list_versions(show_all: bool) -> None:
         click.echo(f"Error: {e}")
         sys.exit(1)
 
-
+  
 @cli.command()
 @click.option("--auto", is_flag=True, help="Automatically proceed without confirmation")
-@click.option("--version", "target_version", default=None, help="Specify a target Python version")
-def update(auto: bool, target_version: str | None) -> None:
-    """Download and install Python version (does NOT modify system defaults)."""
+@click.option("--version", "target_version", default=None, help="Specify a target Python version (e.g., 3.11.5)")
+@click.option("--build-from-source", is_flag=True, help="Compile Python from source (Linux only)")
+def update(auto: bool, target_version: str | None, build_from_source: bool) -> None:
+    """Download and install Python version (does NOT modify system defaults).""" 
     try:
         local_ver = platform.python_version()
         install_version = None
@@ -356,7 +357,8 @@ def update(auto: bool, target_version: str | None) -> None:
         if os_name == "windows":
             success = update_python_windows(install_version)
         elif os_name == "linux":
-            success = update_python_linux(install_version)
+            # We are now passing the build_from_source variable here
+            success = update_python_linux(install_version, build_from_source)
         elif os_name == "darwin":
             success = update_python_macos(install_version)
         else:
