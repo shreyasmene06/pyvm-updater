@@ -1,126 +1,43 @@
-# Quick Start Guide - Python Version Manager (pyvm)
+# Quick Start Guide
 
-## 🚀 Installation
+Get started with pyvm in minutes.
 
-### Windows Users
-1. Open Command Prompt or PowerShell
-2. Navigate to the project directory:
-   ```cmd
-   cd C:\path\to\sideProjects
-   ```
-3. Run the installer:
-   ```cmd
-   install.bat
-   ```
+## Installation
 
-### Linux/macOS Users
-1. Open Terminal
-2. Navigate to the project directory:
-   ```bash
-   cd /path/to/sideProjects
-   ```
-3. Run the installer:
-   ```bash
-   ./install.sh
-   ```
+### Linux/macOS
 
-Or install directly:
 ```bash
-pip install -e .
+pip install --user pyvm-updater
 ```
 
-## 📋 Usage Examples
+### Windows
+
+```bash
+pip install pyvm-updater
+```
+
+### Verify Installation
+
+```bash
+pyvm --version
+```
+
+If the command is not found, add `~/.local/bin` to your PATH:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+## Basic Usage
 
 ### Check Your Python Version
+
 ```bash
-pyvm
-# or
 pyvm check
 ```
 
-### Update Python to Latest Version
-```bash
-pyvm update
+Output:
 ```
-
-### Update to a Specific Version
-```bash
-pyvm update --version 3.11.5
-```
-
-### Update Without Confirmation (Auto Mode)
-```bash
-pyvm update --auto
-pyvm update --version 3.11.5 --auto
-```
-
-### Show System Information
-```bash
-pyvm info
-```
-
-### Show Help
-```bash
-pyvm --help
-```
-
-## 🔧 Troubleshooting
-
-### Command not found: pyvm
-The installation directory is not in your PATH. Try:
-
-**Linux/macOS:**
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export PATH="$HOME/.local/bin:$PATH"
-
-# Reload shell configuration
-source ~/.bashrc  # or source ~/.zshrc
-```
-
-**Windows:**
-- The Python Scripts directory should be in PATH
-- Usually: `C:\Users\YourName\AppData\Local\Programs\Python\Python3xx\Scripts`
-- Or use: `python -m python_version` instead
-
-### Permission Denied (Linux/macOS)
-For updates, you may need sudo:
-```bash
-sudo pyvm update
-```
-
-### Missing Dependencies
-Install manually:
-```bash
-pip install requests beautifulsoup4 packaging click
-```
-
-## 🌍 Platform Notes
-
-### Windows
-- Downloads official .exe installer
-- Runs installer GUI
-- May require administrator privileges
-- **Tip:** Check "Add Python to PATH" during installation
-
-### Linux (Ubuntu/Debian)
-- Uses apt package manager
-- Requires sudo for system-wide installation
-- Uses deadsnakes PPA for latest versions
-
-### Linux (Fedora/RHEL)
-- Uses dnf or yum package manager
-- Requires sudo privileges
-
-### macOS
-- Uses Homebrew if available
-- Otherwise provides download link
-- Can also use official .pkg installer
-
-## 📝 Example Session
-
-```bash
-$ pyvm
 Checking Python version... (Current: 3.12.3)
 
 ========================================
@@ -129,68 +46,180 @@ Checking Python version... (Current: 3.12.3)
 Your version:   3.12.3
 Latest version: 3.14.0
 ========================================
-⚠ A new version (3.14.0) is available!
+A new version (3.14.0) is available!
 
-💡 Tip: Run 'pyvm update' to upgrade Python
-
-$ pyvm update
-🔍 Checking for updates...
-
-📊 Current version: 3.12.3
-📊 Latest version:  3.14.0
-
-🚀 Update available: 3.12.3 → 3.14.0
-
-Do you want to proceed with the update? [y/N]: y
-
-🖥️  Detected: Linux (amd64)
-🐧 Linux detected
-Using apt package manager...
-...
-✅ Update process completed!
+Tip: Run 'pyvm update' to upgrade Python
 ```
 
-## ✨ Features
+### List Available Versions
 
-✅ Cross-platform (Windows, Linux, macOS)
-✅ Automatic version detection
-✅ One-command updates
-✅ Progress indication
-✅ Detailed error messages
-✅ Safe with confirmation prompts
-✅ Admin privilege detection
-✅ Exit codes for scripting
+```bash
+pyvm list
+```
 
-## 🔗 Useful Links
+Output:
+```
+SERIES     LATEST       STATUS          SUPPORT UNTIL
+-------------------------------------------------------
+3.14       3.14.2       bugfix          2030-10
+3.13       3.13.11      bugfix          2029-10
+3.12       3.12.12      security        2028-10
+3.11       3.11.14      security        2027-10
+3.10       3.10.19      security        2026-10
+```
 
-- Python Official: https://www.python.org/downloads/
-- pyenv (Alternative): https://github.com/pyenv/pyenv
-- Homebrew (macOS): https://brew.sh/
+### Update to Latest Python
 
-## 💡 Tips
+```bash
+pyvm update
+```
 
-1. **Always backup** important Python projects before major updates
-2. **Virtual environments** are not affected by system Python updates
-3. **Check compatibility** of your projects before updating
-4. **Restart** your terminal/IDE after updates
-5. Use **pyenv** or **conda** for managing multiple Python versions
+### Install a Specific Version
 
-## 🐛 Known Limitations
+```bash
+pyvm install 3.12.8
+```
 
-- Cannot update Python being used to run pyvm itself
-- System Python on some Linux distros is protected
-- May require manual intervention on some systems
-- Update process varies by platform
+### Launch Interactive TUI
 
-## 📧 Support
+```bash
+pyvm tui
+```
 
-If you encounter issues:
-1. Check the troubleshooting section
-2. Verify your internet connection
-3. Ensure you have proper permissions
-4. Check python.org is accessible
-5. Try manual installation from python.org
+## TUI Navigation
 
----
+| Key | Action |
+|-----|--------|
+| Tab | Switch between panels |
+| Arrow Keys | Navigate within panel |
+| Enter | Install selected version |
+| U | Update to latest |
+| R | Refresh data |
+| Q | Quit |
 
-**Happy Pythoning! 🐍**
+## Virtual Environment Management
+
+### Create Environment
+
+```bash
+pyvm venv create myproject
+```
+
+### Create with Specific Python
+
+```bash
+pyvm venv create myproject --python 3.12
+```
+
+### List Environments
+
+```bash
+pyvm venv list
+```
+
+### Activate Environment
+
+```bash
+pyvm venv activate myproject
+# Follow the printed instructions to activate
+```
+
+### Remove Environment
+
+```bash
+pyvm venv remove myproject
+```
+
+## Using Installed Python Versions
+
+After installing a new Python version, it's available alongside your existing version.
+
+### Linux/macOS
+
+```bash
+# Use new version directly
+python3.12 your_script.py
+
+# Create virtual environment with new version
+python3.12 -m venv myproject
+source myproject/bin/activate
+```
+
+### Windows
+
+```bash
+# Use Python Launcher
+py -3.12 your_script.py
+
+# List all versions
+py --list
+
+# Create virtual environment
+py -3.12 -m venv myproject
+myproject\Scripts\activate
+```
+
+## Common Commands
+
+| Command | Description |
+|---------|-------------|
+| `pyvm check` | Check version status |
+| `pyvm list` | List available versions |
+| `pyvm install 3.12.8` | Install specific version |
+| `pyvm update` | Update to latest |
+| `pyvm update --auto` | Update without confirmation |
+| `pyvm tui` | Launch interactive interface |
+| `pyvm info` | Show system information |
+| `pyvm rollback` | Undo last installation |
+| `pyvm config` | View configuration |
+
+## Configuration
+
+View current configuration:
+
+```bash
+pyvm config
+```
+
+Create default configuration file:
+
+```bash
+pyvm config --init
+```
+
+Configuration location: `~/.config/pyvm/config.toml`
+
+## Troubleshooting
+
+### Command Not Found
+
+Add to PATH:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
+source ~/.bashrc
+```
+
+### Permission Denied
+
+Use user installation:
+
+```bash
+pip install --user pyvm-updater
+```
+
+### Missing Dependencies
+
+Reinstall:
+
+```bash
+pip install --user --force-reinstall pyvm-updater
+```
+
+## Next Steps
+
+- Explore `pyvm --help` for all available commands
+- Try `pyvm tui` for an interactive experience
+- See [INSTALL.md](INSTALL.md) for detailed installation options
+- Check [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for command reference

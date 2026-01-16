@@ -1,346 +1,296 @@
-# Installation Guide - Python Version Manager
+# Installation Guide
 
-## 🚀 Quick Install (For New Users)
+This guide covers all installation methods for pyvm-updater.
 
-### Step 1: Get the Code from GitHub
+## Requirements
+
+- Python 3.9 or higher
+- pip package manager
+- Internet connection
+- Admin/sudo privileges (for some installation methods)
+
+## Quick Install
+
+### From PyPI
 
 ```bash
-# Clone the repository
-git clone https://github.com/shreyasmene06/pyvm-updater.git
-
-# Navigate to the project
-cd pyvm-updater
+pip install --user pyvm-updater
 ```
 
-### Step 2: Pre-Installation Check (Optional but Recommended)
+### From GitHub
+
+```bash
+git clone https://github.com/shreyasmene06/pyvm-updater.git
+cd pyvm-updater
+pip install --user .
+```
+
+## Installation Methods
+
+### Method 1: pip with user flag (Recommended)
+
+This installs the package in your user directory without requiring admin privileges.
+
+```bash
+pip install --user pyvm-updater
+```
+
+### Method 2: pipx (Best for CLI tools)
+
+pipx installs Python applications in isolated environments.
+
+```bash
+# Install pipx if not already installed
+sudo apt install pipx    # Ubuntu/Debian
+brew install pipx        # macOS
+
+# Install pyvm-updater
+pipx install pyvm-updater
+
+# Ensure PATH is configured
+pipx ensurepath
+```
+
+### Method 3: Virtual Environment
+
+```bash
+# Create virtual environment
+python3 -m venv pyvm-env
+source pyvm-env/bin/activate
+
+# Install
+pip install pyvm-updater
+```
+
+### Method 4: System-wide (Requires admin)
+
+```bash
+sudo pip install pyvm-updater
+```
+
+### Method 5: Development Install
+
+For contributors and developers:
+
+```bash
+git clone https://github.com/shreyasmene06/pyvm-updater.git
+cd pyvm-updater
+pip install -e ".[dev]"
+```
+
+## Pre-Installation Check
+
+Run the requirements checker before installation:
+
 ```bash
 python3 check_requirements.py
 ```
 
-This will verify:
-- ✓ Python version (3.7+ required)
-- ✓ pip is installed
-- ✓ Internet connectivity
-- ✓ Operating system support
-- ✓ Installation permissions
-- ✓ Existing dependencies
+This verifies:
+- Python version compatibility
+- pip installation
+- Internet connectivity
+- Operating system support
+- Installation permissions
 
-### Step 3: Install the Tool
-
-**Option A: User Install (Recommended - No sudo required)**
-```bash
-pip install --user .
-```
-
-**Option B: System-wide Install**
-```bash
-sudo pip install .
-```
-
-**Option C: Development Install (For contributors only)**
-```bash
-pip install --user -e .
-```
-
-**⚠️ Note for Anaconda Users:** If you get a "File exists" error with option C, use option A instead.
-
-### Step 4: Verify Installation
-```bash
-pyvm --version
-pyvm check
-```
-
-If you see "command not found", add `~/.local/bin` to your PATH:
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
----
-
-## 📦 Dependencies
-
-All dependencies are automatically installed via `setup.py`:
-
-- `requests>=2.25.0` - HTTP requests for downloading Python info
-- `beautifulsoup4>=4.9.0` - HTML parsing for Python.org
-- `packaging>=20.0` - Version comparison
-- `click>=8.0.0` - CLI framework
-
----
-
-## 🔧 Manual Dependency Installation (If Needed)
-
-If automatic installation fails:
-
-```bash
-pip install requests beautifulsoup4 packaging click
-```
-
-Or use the included install scripts:
-
-**Linux/macOS:**
-```bash
-bash install.sh
-```
-
-**Windows:**
-```cmd
-install.bat
-```
-
----
-
-## � Special Instructions for Anaconda/Miniconda Users
-
-If you're using Anaconda or Miniconda, follow these special instructions:
-
-### Installation
-```bash
-# Use regular install (NOT editable mode)
-pip install --user .
-```
-
-**Do NOT use:**
-```bash
-pip install --user -e .  # ❌ This may cause "File exists" errors with Anaconda
-```
-
-### After Installation
-
-The `pyvm` tool will work, but keep in mind:
-- ✅ `pyvm check` - Will show your Anaconda Python version
-- ✅ `pyvm update` - Will install the latest Python to your system
-- ⚠️ Your Anaconda Python version won't change (this is expected!)
-
-### Understanding the Results
-
-```bash
-# Your Anaconda Python (unchanged)
-python --version
-# Output: Python 3.13.5 (or whatever Anaconda version you have)
-
-# The newly installed system Python
-python3.14 --version
-# Output: Python 3.14.0
-```
-
-### How to Use the Updated Python
-
-**Option 1: Use it directly**
-```bash
-python3.14 your_script.py
-```
-
-**Option 2: Create a virtual environment**
-```bash
-python3.14 -m venv myproject
-source myproject/bin/activate
-python --version  # Now shows 3.14.0
-```
-
-**Option 3: Continue using Anaconda (Recommended for data science)**
-```bash
-# Your Anaconda environment works normally
-conda activate myenv
-python your_script.py
-```
-
-### Why This Happens
-
-Anaconda maintains its own Python installation separate from system Python. When you update Python with `pyvm`, it updates the system Python, not your Anaconda installation. This is actually beneficial because:
-- ✅ Prevents conflicts between Anaconda and system packages
-- ✅ Keeps your Anaconda environment stable
-- ✅ Gives you both options available
-
----
-
-## �🖥️ Platform-Specific Notes
-
-### Windows
-- No additional requirements
-- Installer will be downloaded and launched
-- **Tip**: Run as Administrator for system-wide installation
+## Platform-Specific Notes
 
 ### Linux (Ubuntu/Debian)
-- Uses `apt` package manager
-- Adds `deadsnakes/ppa` for latest Python versions
-- **Requires**: `sudo` privileges for installation
-- **Alternative**: Use `pyenv` for user-level installations
+
+On Ubuntu 23.04+ and Debian 12+, the system Python is protected. Use one of these approaches:
+
+```bash
+# Option 1: User install
+pip install --user pyvm-updater
+
+# Option 2: Use pipx
+sudo apt install pipx
+pipx install pyvm-updater
+
+# Option 3: Virtual environment
+python3 -m venv ~/.local/pyvm-env
+~/.local/pyvm-env/bin/pip install pyvm-updater
+```
 
 ### Linux (Fedora/RHEL/CentOS)
-- Uses `dnf` or `yum` package manager
-- May not have latest Python versions
-- **Recommended**: Use `pyenv` for version-specific installs
+
+```bash
+pip install --user pyvm-updater
+```
 
 ### macOS
-- **With Homebrew** (Recommended):
-  - Automatic updates via `brew upgrade python3`
-- **Without Homebrew**:
-  - Downloads official installer from Python.org
-  - Manual installation required
-
----
-
-## 🧪 Testing Your Installation
 
 ```bash
-# Check current Python version
+pip3 install --user pyvm-updater
+```
+
+If you have Homebrew:
+
+```bash
+brew install pipx
+pipx install pyvm-updater
+```
+
+### Windows
+
+```bash
+pip install pyvm-updater
+```
+
+If you encounter permission issues, try:
+
+```bash
+pip install --user pyvm-updater
+```
+
+## Verify Installation
+
+After installation, verify pyvm is working:
+
+```bash
+# Check version
+pyvm --version
+
+# Check Python version
 pyvm check
 
-# Show system information
-pyvm info
-
-# Check for updates (safe, won't install)
-pyvm update
-
-# Update Python (with confirmation prompt)
-pyvm update
-
-# Update Python (automatic, no prompt)
-pyvm update --auto
+# Show help
+pyvm --help
 ```
 
----
+## PATH Configuration
 
-## 🔍 Troubleshooting
+If `pyvm` command is not found after installation, add the installation directory to your PATH.
 
-### "Command not found: pyvm"
+### Linux/macOS
 
-**Fix 1**: Ensure pip install location is in PATH
+Add to `~/.bashrc` or `~/.zshrc`:
+
 ```bash
-# Check where pyvm is installed
-pip show -f pyvm-updater
-
-# Add to PATH (Linux/macOS - add to ~/.bashrc or ~/.zshrc)
 export PATH="$HOME/.local/bin:$PATH"
-
-# Add to PATH (Windows)
-# Control Panel → System → Advanced → Environment Variables
-# Add: C:\Users\YourName\AppData\Local\Programs\Python\Python3X\Scripts
 ```
 
-**Fix 2**: Use Python module syntax
-```bash
-python -m python_version check
-```
-
-### "ImportError: No module named 'click'"
-
-Dependencies weren't installed. Run:
-```bash
-pip install -e .
-```
-
-Or manually:
-```bash
-pip install requests beautifulsoup4 packaging click
-```
-
-### "Permission denied" errors on Linux
-
-Use user install instead:
-```bash
-pip install --user -e .
-```
-
-### Network/SSL errors
-
-Update pip and certificates:
-```bash
-pip install --upgrade pip certifi
-```
-
-### Version mismatch after update
-
-The tool updates Python system-wide, but your current terminal may still use the old version.
-
-**Solution**: Restart your terminal/IDE or run:
-```bash
-hash -r  # Bash/Zsh
-rehash   # Tcsh
-```
-
----
-
-## 🔄 Updating the Tool Itself
+Then reload:
 
 ```bash
-cd /home/shreyasmene06/coding/sideProjects
-git pull  # If using git
-pip install --upgrade -e .
+source ~/.bashrc    # or source ~/.zshrc
 ```
 
----
+### Windows
 
-## 🗑️ Uninstallation
+Add to PATH via System Properties:
+1. Open System Properties > Advanced > Environment Variables
+2. Under User variables, edit PATH
+3. Add: `%APPDATA%\Python\Python3XX\Scripts`
+
+## Updating pyvm
+
+### From PyPI
+
+```bash
+pip install --upgrade pyvm-updater
+```
+
+### From GitHub
+
+```bash
+cd pyvm-updater
+git pull
+pip install --upgrade .
+```
+
+## Uninstallation
 
 ```bash
 pip uninstall pyvm-updater
 ```
 
----
+## Dependencies
 
-## 📚 Usage Examples
+The following packages are automatically installed:
 
-### Check version only
+| Package | Purpose |
+|---------|---------|
+| requests | HTTP requests for downloading |
+| beautifulsoup4 | HTML parsing for python.org |
+| packaging | Version comparison |
+| click | CLI framework |
+| textual | Terminal UI framework |
+
+## Troubleshooting
+
+### "externally-managed-environment" Error
+
+This occurs on newer Linux systems. Solutions:
+
 ```bash
-pyvm check
-# Exit code 0 = up-to-date
-# Exit code 1 = update available
+# Use user install
+pip install --user pyvm-updater
+
+# Or use pipx
+pipx install pyvm-updater
 ```
 
-### Automated update in scripts
+### "Command not found" Error
+
+The installation directory is not in PATH. See PATH Configuration section above.
+
+### Permission Denied
+
+Use `--user` flag or run with sudo:
+
 ```bash
-#!/bin/bash
-if ! pyvm check; then
-    echo "Update available!"
-    pyvm update --auto
-fi
+pip install --user pyvm-updater
+# or
+sudo pip install pyvm-updater
 ```
 
-### Show detailed system info
+### Import Errors
+
+Reinstall with dependencies:
+
 ```bash
-pyvm info
+pip install --user --force-reinstall pyvm-updater
 ```
 
----
+### Network/SSL Errors
 
-## 🛡️ Security Notes
+Update pip and certificates:
 
-1. **Always verify**: This tool downloads from python.org (official source)
-2. **Admin required**: Updates require sudo/admin on most systems
-3. **Manual verification**: Review installer prompts before proceeding
-4. **PPA trust**: Linux users should trust the deadsnakes PPA
+```bash
+pip install --upgrade pip certifi
+```
 
----
+## Anaconda/Miniconda Users
 
-## 🆘 Getting Help
+pyvm works with Anaconda but installs Python to the system, not your Anaconda environment.
 
-1. Check `SECURITY_FIXES.md` for known issues and fixes
-2. Run pre-installation checker: `python3 check_requirements.py`
-3. Enable verbose mode (if available): `pyvm --verbose check`
-4. Check logs in terminal output
+```bash
+# Install using pip (not conda)
+pip install --user pyvm-updater
+```
 
----
+After updating Python with pyvm:
 
-## ✅ Post-Installation Checklist
+```bash
+# Your Anaconda Python (unchanged)
+python --version
 
-- [ ] `pyvm --version` works
-- [ ] `pyvm check` shows current version
-- [ ] Internet connectivity confirmed
-- [ ] Admin/sudo available (if needed)
-- [ ] PATH configured correctly
-- [ ] All dependencies installed
+# System Python updated by pyvm
+python3.12 --version
+```
 
----
+To use the updated Python:
 
-## 🎯 Next Steps
+1. Use it directly: `python3.12 your_script.py`
+2. Create a virtual environment: `python3.12 -m venv myenv`
+3. Continue using Anaconda for your data science work
+
+## Next Steps
 
 After successful installation:
 
-1. **Check your version**: `pyvm check`
-2. **Update if needed**: `pyvm update`
-3. **Restart terminal/IDE** to use new Python version
-4. **Verify update**: `python --version`
-
-**Enjoy your updated Python! 🐍**
+1. Run `pyvm check` to see your Python version status
+2. Run `pyvm list` to see available Python versions
+3. Run `pyvm tui` to explore the interactive interface
+4. See [QUICKSTART.md](QUICKSTART.md) for usage examples
