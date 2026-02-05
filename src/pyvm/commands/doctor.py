@@ -1,36 +1,44 @@
-import os
 import subprocess
 import requests
+import os
 
-def check_pyenv():
+def check_pyenv_installed():
     try:
         subprocess.run(["pyenv", "--version"], check=True)
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except Exception:
         return False
 
-def check_mise():
+def check_mise_installed():
     try:
         subprocess.run(["mise", "--version"], check=True)
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except Exception:
         return False
 
-def check_network():
+def check_network_reachable():
     try:
-        response = requests.get("https://www.google.com", timeout=5)
+        response = requests.get("https://www.python.org", timeout=5)
         return response.status_code == 200
-    except requests.ConnectionError:
+    except requests.RequestException:
         return False
 
 def check_permissions():
-    return os.access(os.path.expanduser("~"), os.W_OK)
+    return os.access(os.path.expanduser("~/.pyenv"), os.W_OK)
 
-def run_doctor():
-    checks = {
-        "pyenv": check_pyenv(),
-        "mise": check_mise(),
-        "network": check_network(),
-        "permissions": check_permissions(),
-    }
-    return checks
+def run_diagnostics():
+    print("Running diagnostics...")
+    pyenv_ok = check_pyenv_installed()
+    mise_ok = check_mise_installed()
+    network_ok = check_network_reachable()
+    permissions_ok = check_permissions()
+
+    print(f"pyenv installed: {'Yes' if pyenv_ok else 'No'}")
+    print(f"mise installed: {'Yes' if mise_ok else 'No'}")
+    print(f"Network reachable: {'Yes' if network_ok else 'No'}")
+    print(f"Permissions ok: {'Yes' if permissions_ok else 'No'}")
+
+    if pyenv_ok and mise_ok and network_ok and permissions_ok:
+        print("All checks passed!")
+    else:
+        print("Some checks failed. Please review the output.")
