@@ -1,8 +1,6 @@
-from .commands.doctor import run_doctor
+from .commands.doctor import run_diagnostics
 
 def main():
-    # Existing command handling logic
-    ...
-    if command == "doctor":
-        run_doctor()
-    ...
+    # Existing command registration logic
+    # Add command registration for `pyvm doctor`
+    cli.add_command("doctor", run_diagnostics)
