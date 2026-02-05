@@ -1,6 +1,3 @@
-from .commands.doctor import run_diagnostics
+from .cli import cli
 
-def main():
-    # Existing command registration code
-    # ...
-    command_registry["doctor"] = run_diagnostics
+__all__ = ["cli"]
