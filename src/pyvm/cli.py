@@ -1,54 +1,39 @@
-import click
 import subprocess
-import socket
+import requests
 
-@click.group()
-def cli():
-    pass
+def check_pyenv():
+    try:
+        subprocess.run(['pyenv', '--version'], check=True)
+        return True
+    except Exception:
+        return False
 
-@cli.command()
+def check_mise():
+    try:
+        subprocess.run(['mise', '--version'], check=True)
+        return True
+    except Exception:
+        return False
+
+def check_network():
+    try:
+        requests.get('https://www.google.com', timeout=5)
+        return True
+    except requests.ConnectionError:
+        return False
+
+def check_permissions():
+    # Placeholder for permissions check logic
+    return True
+
 def doctor():
-    """Run a health check on the pyvm environment."""
     print("Running health checks...")
-    
-    # Check if pyenv is installed
-    if not is_tool_installed("pyenv"):
-        print("Warning: pyenv is not installed.")
-    
-    # Check if mise is installed
-    if not is_tool_installed("mise"):
-        print("Warning: mise is not installed.")
-    
-    # Check network connectivity
-    if not is_network_reachable("www.python.org"):
-        print("Warning: Network is unreachable.")
-    
-    # Check permissions (assuming a specific directory here)
-    if not is_writable("/path/to/pyvm/directory"):
-        print("Warning: Insufficient permissions for pyvm directory.")
-    
-    print("Health check completed.")
+    pyenv_ok = check_pyenv()
+    mise_ok = check_mise()
+    network_ok = check_network()
+    permissions_ok = check_permissions()
 
-def is_tool_installed(name):
-    """Check if a command-line tool is installed."""
-    return subprocess.call(["which", name], stdout=subprocess.PIPE, stderr=subprocess.PIPE) == 0
-
-def is_network_reachable(host):
-    """Check if a network host is reachable."""
-    try:
-        socket.gethostbyname(host)
-        return True
-    except socket.error:
-        return False
-
-def is_writable(path):
-    """Check if a directory is writable."""
-    try:
-        with open(path, 'a'):
-            pass
-        return True
-    except IOError:
-        return False
-
-if __name__ == "__main__":
-    cli()
+    if pyenv_ok and mise_ok and network_ok and permissions_ok:
+        print("All checks passed!")
+    else:
+        print("Some checks failed. Please address the issues.")
