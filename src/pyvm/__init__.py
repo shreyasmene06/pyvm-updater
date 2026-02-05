@@ -1,5 +1,3 @@
-from .commands.doctor import run_doctor
+from .cli import doctor
 
-def register_commands():
-    # Existing command registrations
-    register_command("doctor", run_doctor)
+__all__ = ["doctor"]
