@@ -1,3 +1,3 @@
-## Commands
+## pyvm Commands
 
-- `pyvm doctor`: Check installation status and system health.
+- `pyvm doctor`: Run health checks for pyvm environment.
