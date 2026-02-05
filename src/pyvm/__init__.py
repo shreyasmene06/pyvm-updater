@@ -1,2 +1,3 @@
-# Add import statement for the new doctor command
-from .commands.doctor import run_doctor
+from .commands.doctor import run_diagnostics  # Import the doctor command
+
+# Other existing imports and initialization code...
