@@ -1,35 +1,42 @@
 import subprocess
-import socket
 import os
 
-def check_pyenv_mise():
+def check_pyenv():
     try:
-        pyenv_installed = subprocess.run(['pyenv', '--version'], capture_output=True, text=True).returncode == 0
-        mise_installed = subprocess.run(['mise', '--version'], capture_output=True, text=True).returncode == 0
-        return pyenv_installed, mise_installed
-    except FileNotFoundError:
-        return False, False
+        subprocess.run(["pyenv", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def check_mise():
+    try:
+        subprocess.run(["mise", "--version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 def check_network():
     try:
-        socket.create_connection(("www.google.com", 80))
+        response = subprocess.run(["ping", "-c", "1", "google.com"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return True
-    except OSError:
+    except subprocess.CalledProcessError:
         return False
 
 def check_permissions():
-    return os.access(os.getcwd(), os.W_OK)
+    # Check if the user has write access to the installation directories
+    return os.access(os.path.expanduser("~/.config/pyvm"), os.W_OK)
 
 def run_diagnostics():
-    pyenv, mise = check_pyenv_mise()
-    network = check_network()
-    permissions = check_permissions()
+    pyenv_installed = check_pyenv()
+    mise_installed = check_mise()
+    network_ok = check_network()
+    permissions_ok = check_permissions()
 
-    print("Diagnostics:")
-    print(f"pyenv installed: {'Yes' if pyenv else 'No'}")
-    print(f"mise installed: {'Yes' if mise else 'No'}")
-    print(f"Network reachable: {'Yes' if network else 'No'}")
-    print(f"Write permissions: {'Yes' if permissions else 'No'}")
+    print("Diagnostics Report:")
+    print(f"pyenv installed: {'Yes' if pyenv_installed else 'No'}")
+    print(f"mise installed: {'Yes' if mise_installed else 'No'}")
+    print(f"Network reachable: {'Yes' if network_ok else 'No'}")
+    print(f"Permissions OK: {'Yes' if permissions_ok else 'No'}")
 
-if __name__ == "__main__":
-    run_diagnostics()
+    if not (pyenv_installed and mise_installed and network_ok and permissions_ok):
+        print("Warning: Please resolve the issues above.")
