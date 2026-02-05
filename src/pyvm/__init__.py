@@ -1,4 +1,5 @@
-from .commands.doctor import main as doctor_main
+from .commands.doctor import run_doctor
 
-# Add to command registry
-COMMANDS['doctor'] = doctor_main
+def register_commands():
+    # Existing command registrations
+    register_command("doctor", run_doctor)
