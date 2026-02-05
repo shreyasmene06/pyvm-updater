@@ -1,39 +1,37 @@
+import os
 import subprocess
-import requests
 
-def check_pyenv():
-    try:
-        subprocess.run(['pyenv', '--version'], check=True)
-        return True
-    except Exception:
-        return False
+class DoctorCommand:
+    def run(self):
+        self.check_pyenv()
+        self.check_mise()
+        self.check_network()
+        self.check_permissions()
 
-def check_mise():
-    try:
-        subprocess.run(['mise', '--version'], check=True)
-        return True
-    except Exception:
-        return False
+    def check_pyenv(self):
+        if not self.is_tool_installed('pyenv'):
+            print("pyenv is not installed.")
+        else:
+            print("pyenv is installed.")
 
-def check_network():
-    try:
-        requests.get('https://www.google.com', timeout=5)
-        return True
-    except requests.ConnectionError:
-        return False
+    def check_mise(self):
+        if not self.is_tool_installed('mise'):
+            print("mise is not installed.")
+        else:
+            print("mise is installed.")
 
-def check_permissions():
-    # Placeholder for permissions check logic
-    return True
+    def check_network(self):
+        try:
+            subprocess.check_output(['ping', '-c', '1', 'google.com'])
+            print("Network is reachable.")
+        except subprocess.CalledProcessError:
+            print("Network is not reachable.")
 
-def doctor():
-    print("Running health checks...")
-    pyenv_ok = check_pyenv()
-    mise_ok = check_mise()
-    network_ok = check_network()
-    permissions_ok = check_permissions()
-
-    if pyenv_ok and mise_ok and network_ok and permissions_ok:
-        print("All checks passed!")
-    else:
-        print("Some checks failed. Please address the issues.")
+    def check_permissions(self):
+        if os.access('/', os.W_OK):
+            print("Permissions are okay.")
+        else:
+            print("Permissions issue detected.")
+    
+    def is_tool_installed(self, tool):
+        return subprocess.call(['which', tool], stdout=subprocess.PIPE) == 0
