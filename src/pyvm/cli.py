@@ -1,7 +1,14 @@
 import click
-from . import run_doctor
+from .commands.doctor import run_diagnostics
 
-@click.command()
+@click.group()
+def cli():
+    """Python Version Manager CLI."""
+    pass
+
+@cli.command()
 def doctor():
-    """Run health checks on pyvm setup."""
-    run_doctor()
+    """Run a health check on the pyvm installation."""
+    run_diagnostics()
+
+# Other existing commands...
