@@ -1,5 +1,2 @@
-from .cli import DoctorCommand
-
-# Register DoctorCommand in the command group
-def register_commands(app):
-    app.add_command(DoctorCommand(), name='doctor')
+# Add import statement for the new doctor command
+from .commands.doctor import run_doctor
