@@ -1,52 +1,39 @@
-import click
+import subprocess
+import sys
+from .commands import Command
 
-@click.group()
-def cli():
-    pass
+class DoctorCommand(Command):
+    def run(self):
+        self.check_pyenv()
+        self.check_mise()
+        self.check_network()
+        self.check_permissions()
 
-@cli.command()
-def doctor():
-    """Run a health check on the pyvm environment."""
-    issues = []
+    def check_pyenv(self):
+        try:
+            subprocess.run(["pyenv", "--version"], check=True)
+            print("✅ pyenv is installed.")
+        except subprocess.CalledProcessError:
+            print("❌ pyenv is not installed or not found in PATH.")
 
-    # Check if pyenv is installed
-    if not check_pyenv():
-        issues.append("pyenv is not installed.")
+    def check_mise(self):
+        try:
+            subprocess.run(["mise", "--version"], check=True)
+            print("✅ mise is installed.")
+        except subprocess.CalledProcessError:
+            print("❌ mise is not installed or not found in PATH.")
 
-    # Check if mise is installed
-    if not check_mise():
-        issues.append("mise is not installed.")
+    def check_network(self):
+        try:
+            subprocess.run(["ping", "-c", "1", "google.com"], check=True)
+            print("✅ Network is reachable.")
+        except subprocess.CalledProcessError:
+            print("❌ Network is not reachable.")
 
-    # Check network connectivity
-    if not check_network():
-        issues.append("Network is unreachable.")
+    def check_permissions(self):
+        if os.access('/usr/local/bin', os.W_OK) or os.access('/usr/bin', os.W_OK):
+            print("✅ Permissions are set correctly.")
+        else:
+            print("❌ Check your permissions for installation directories.")
 
-    # Check permissions
-    if not check_permissions():
-        issues.append("Insufficient permissions to access necessary files.")
-
-    if issues:
-        click.echo("Health check failed:")
-        for issue in issues:
-            click.echo(f"- {issue}")
-    else:
-        click.echo("All systems go!")
-        
-def check_pyenv():
-    # Logic to check if pyenv is installed
-    return True  # Placeholder
-
-def check_mise():
-    # Logic to check if mise is installed
-    return True  # Placeholder
-
-def check_network():
-    # Logic to check network connectivity
-    return True  # Placeholder
-
-def check_permissions():
-    # Logic to check permissions
-    return True  # Placeholder
-
-if __name__ == '__main__':
-    cli()
+# In the main application logic, register the DoctorCommand under the 'pyvm' command group.
