@@ -1,42 +1,36 @@
-import click
-import os
 import subprocess
+import requests
+from ..utils import check_permissions
 
-@click.command()
+def check_pyenv():
+    try:
+        subprocess.run(['pyenv', '--version'], check=True)
+        return True
+    except FileNotFoundError:
+        return False
+
+def check_mise():
+    try:
+        subprocess.run(['mise', '--version'], check=True)
+        return True
+    except FileNotFoundError:
+        return False
+
+def check_network():
+    try:
+        response = requests.get("https://www.google.com", timeout=5)
+        return response.status_code == 200
+    except requests.ConnectionError:
+        return False
+
 def doctor():
-    """Run a health check on pyvm."""
-    
-    # Check if pyenv is installed
-    if not is_pyenv_installed():
-        click.echo("pyenv is not installed. Please install pyenv.")
-        return
+    print("Running pyvm doctor...")
+    pyenv_installed = check_pyenv()
+    mise_installed = check_mise()
+    network_ok = check_network()
+    permissions_ok = check_permissions()  # Assuming this function checks necessary permissions
 
-    # Check if mise is installed
-    if not is_mise_installed():
-        click.echo("mise is not installed. Please install mise.")
-        return
-
-    # Check network connectivity
-    if not is_network_reachable():
-        click.echo("Network is not reachable. Check your connection.")
-        return
-
-    # Check permissions
-    if not has_correct_permissions():
-        click.echo("Permissions are not set correctly. Check your installation.")
-        return
-
-    click.echo("All checks passed! Your installation is healthy.")
-
-def is_pyenv_installed():
-    return subprocess.call(['pyenv', '--version'], stdout=subprocess.DEVNULL) == 0
-
-def is_mise_installed():
-    return subprocess.call(['mise', '--version'], stdout=subprocess.DEVNULL) == 0
-
-def is_network_reachable():
-    return subprocess.call(['ping', '-c', '1', 'google.com'], stdout=subprocess.DEVNULL) == 0
-
-def has_correct_permissions():
-    # Check permissions for critical directories
-    return os.access('/usr/local/bin', os.X_OK) and os.access('/usr/bin', os.X_OK)
+    if pyenv_installed and mise_installed and network_ok and permissions_ok:
+        print("All checks passed. Your environment is healthy!")
+    else:
+        print("Some checks failed. Please address the issues.")
