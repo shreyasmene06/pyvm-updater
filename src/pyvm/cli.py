@@ -1,8 +1,11 @@
 import click
-from .commands import doctor
+from . import doctor_command
 
 @click.group()
 def cli():
     pass
 
-cli.add_command(doctor.doctor)
+@cli.command()
+def doctor():
+    """Run health checks for pyvm environment."""
+    doctor_command()
