@@ -1,3 +1,1 @@
-from .commands.doctor import run_diagnostics  # Import the doctor command
-
-# Other existing imports and initialization code...
+from .commands.doctor import doctor as doctor_command
