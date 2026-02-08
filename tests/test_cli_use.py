@@ -16,6 +16,7 @@ class TestCliUse:
     def test_use_version_success_linux(self, mock_run, mock_find, runner):
         # Mock finding python
         mock_find.return_value = "/usr/bin/python3.11"
+        mock_session_dir = "/mock/pyvm_session_123"
 
         # Mock OS info for Linux
         with patch("pyvm_updater.cli.get_os_info", return_value=("linux", "amd64")):
@@ -28,7 +29,7 @@ class TestCliUse:
                 patch("os.path.exists", return_value=False),
             ):  # For pip checks
 
-                mock_mkdtemp.return_value = "/tmp/pyvm_session_123"
+                mock_mkdtemp.return_value = mock_session_dir
 
                 result = runner.invoke(cli, ["use", "3.11.5"])
 
@@ -37,13 +38,13 @@ class TestCliUse:
 
                 # Check if symlinks were created
                 # We expect symlink for python
-                # mock_symlink.assert_any_call("/usr/bin/python3.11", "/tmp/pyvm_session_123/bin/python")
+                # mock_symlink.assert_any_call("/usr/bin/python3.11", f"{mock_session_dir}/bin/python")
 
                 # Check subprocess call
                 mock_run.assert_called_once()
 
                 # Check cleanup
-                mock_rmtree.assert_called_once_with("/tmp/pyvm_session_123")
+                mock_rmtree.assert_called_once_with(mock_session_dir)
 
     @patch("pyvm_updater.venv.find_python_executable")
     def test_use_version_not_found(self, mock_find, runner):
