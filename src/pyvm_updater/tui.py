@@ -34,6 +34,7 @@ from .installers import (
 )
 from .utils import get_os_info
 from .version import check_python_version, get_active_python_releases, get_installed_python_versions
+from .wizard import WizardScreen
 
 
 class StatusBar(Static):
@@ -119,6 +120,7 @@ class AvailableList(ListView):
         Binding("tab", "focus_next_panel", "Next Panel", show=False),
         Binding("shift+tab", "focus_prev_panel", "Prev Panel", show=False),
         Binding("enter", "install_selected", "Install", show=True),
+        Binding("w", "wizard_selected", "Wizard", show=True),
     ]
 
     def action_focus_next_panel(self) -> None:
@@ -135,6 +137,12 @@ class AvailableList(ListView):
             if hasattr(self.screen, "start_install"):
                 self.screen.start_install(version)  # type: ignore[attr-defined]
 
+    def action_wizard_selected(self) -> None:
+        if self.highlighted_child and isinstance(self.highlighted_child, VersionItem):
+            version = self.highlighted_child.version
+            if hasattr(self.screen, "start_wizard"):
+                self.screen.start_wizard(version)  # type: ignore[attr-defined]
+
 
 class MainScreen(Screen):
     """Main TUI screen with navigable panels"""
@@ -144,6 +152,7 @@ class MainScreen(Screen):
         Binding("r", "refresh", "Refresh"),
         Binding("u", "update_latest", "Update"),
         Binding("b", "rollback", "Rollback"),
+        Binding("w", "start_wizard", "Wizard"),
         Binding("1", "focus_installed", "Installed", show=False),
         Binding("2", "focus_available", "Available", show=False),
         Binding("?", "help", "Help"),
@@ -290,7 +299,8 @@ class MainScreen(Screen):
                 yield Label("Loading...")
 
             yield Static(
-                "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | R: refresh | U: update | B: rollback | Q: quit[/dim]",
+                "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | "
+                "R: refresh | U: update | B: rollback | Q: quit[/dim]",
                 id="hint-bar",
             )
 
@@ -311,6 +321,7 @@ class MainScreen(Screen):
             with Horizontal(id="button-area"):
                 yield Button("Refresh [R]", id="refresh-btn", variant="default")
                 yield Button("Update [U]", id="update-btn", variant="primary")
+                yield Button("Wizard [W]", id="wizard-btn", variant="default")
                 yield Button("Rollback [B]", id="rollback-btn", variant="warning")
                 yield Button("Quit [Q]", id="quit-btn", variant="error")
 
@@ -435,9 +446,19 @@ class MainScreen(Screen):
             ver = v.get("version", "Unknown")
             path = v.get("path", "")
             is_current = v.get("default", False)
+            is_store = v.get("store", False)
+
             # Shorten path for display
             short_path = path.split("/")[-1] if "/" in path else path.split("\\")[-1] if "\\" in path else ""
-            await installed_list.append(VersionItem(ver, short_path, is_current, False))
+
+            info = short_path
+            if is_store:
+                if info:
+                    info = f"Store | {info}"
+                else:
+                    info = "Store"
+
+            await installed_list.append(VersionItem(ver, info, is_current, False))
 
     async def _populate_available_list(self) -> None:
         """Populate the available versions list"""
@@ -473,6 +494,19 @@ class MainScreen(Screen):
     def start_install(self, version: str) -> None:
         """Start installing a version (called from AvailableList)"""
         self.run_install_with_suspend(version)
+
+    def action_start_wizard(self) -> None:
+        """Start wizard without a version pre-selected"""
+        self.start_wizard()
+
+    def start_wizard(self, version: Optional[str] = None) -> None:
+        """Open the installation wizard"""
+
+        def handle_wizard_result(options: Optional[dict[str, Any]]) -> None:
+            if options:
+                self.run_wizard_install_with_suspend(options)
+
+        self.app.push_screen(WizardScreen(version), handle_wizard_result)
 
     def start_remove(self, version: str) -> None:
         """Start removing a version (called from InstalledList)"""
@@ -530,6 +564,69 @@ class MainScreen(Screen):
             status_bar.set_message("Installation had issues.", "yellow")
 
         # Refresh to show updated installed versions
+        self.refresh_all()
+
+    def run_wizard_install_with_suspend(self, options: dict[str, Any]) -> None:
+        """Run installation with wizard options with TUI suspended"""
+        from textual.app import SuspendNotSupported
+
+        version = options["version"]
+        os_name, _ = get_os_info()
+        success = False
+
+        def do_installation():
+            print(f"\n{'=' * 50}")
+            print(f"Wizard: Installing Python {version}")
+            print(f"Installer: {options['installer']}")
+            if options.get("install_path"):
+                print(f"Path: {options['install_path']}")
+            print(f"{'=' * 50}\n")
+
+            # Prepare installer-specific arguments
+            installer_kwargs = options.copy()
+            preferred = installer_kwargs.pop("installer", "auto")
+            installer_kwargs.pop("version", None)
+
+            if os_name == "windows":
+                return update_python_windows(version, preferred=preferred, **installer_kwargs)
+            elif os_name == "linux":
+                # Ensure build_from_source is passed correctly if source installer is used
+                bfs = options.get("build_from_source", False)
+                if preferred == "source":
+                    bfs = True
+                return update_python_linux(version, build_from_source=bfs, preferred=preferred, **installer_kwargs)
+            elif os_name == "darwin":
+                return update_python_macos(version, preferred=preferred, **installer_kwargs)
+            else:
+                print(f"Unsupported OS: {os_name}")
+                return False
+
+        try:
+            with self.app.suspend():
+                success = do_installation()
+                print(f"\n{'=' * 50}")
+                if success:
+                    print("Installation complete!")
+                else:
+                    print("Installation had issues.")
+                print(f"{'=' * 50}")
+                print("\nPress Enter to return to TUI...")
+                try:
+                    input()
+                except EOFError:
+                    pass
+        except SuspendNotSupported:
+            status_bar = self.query_one("#status-bar", StatusBar)
+            status_bar.set_message(f"Installing Python {version}... (check terminal)", "yellow")
+            success = do_installation()
+
+        status_bar = self.query_one("#status-bar", StatusBar)
+        if success:
+            status_bar.set_message(f"Python {version} installed successfully!", "green")
+            self.app.push_screen(SuccessScreen(version, os_name))
+        else:
+            status_bar.set_message("Installation had issues.", "yellow")
+
         self.refresh_all()
 
     def run_remove_with_suspend(self, version: str) -> None:
@@ -603,6 +700,8 @@ class MainScreen(Screen):
             self.action_refresh()
         elif event.button.id == "update-btn":
             self.action_update_latest()
+        elif event.button.id == "wizard-btn":
+            self.action_start_wizard()
         elif event.button.id == "rollback-btn":
             self.action_rollback()
         elif event.button.id == "quit-btn":
@@ -834,6 +933,7 @@ class HelpScreen(Screen):
   X         Remove selected version
   R         Refresh data
   U         Update to latest version
+  W         Install wizard
   B         Rollback last action
   ?         This help
   Q         Quit

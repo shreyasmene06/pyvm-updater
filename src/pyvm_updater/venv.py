@@ -102,7 +102,7 @@ def find_python_executable(version: str) -> str | None:
             else:
                 path = shutil.which(candidate)
                 if path:
-                    return path
+                    return str(path)
 
     return None
 
@@ -112,6 +112,7 @@ def create_venv(
     python_version: str | None = None,
     path: Path | None = None,
     system_site_packages: bool = False,
+    requirements_file: Path | None = None,
 ) -> tuple[bool, str]:
     """Create a new virtual environment.
 
@@ -120,6 +121,7 @@ def create_venv(
         python_version: Python version to use (e.g., "3.12"). If None, uses current Python.
         path: Custom path for venv. If None, uses default location.
         system_site_packages: Whether to include system site-packages.
+        requirements_file: Path to requirements.txt file to install.
 
     Returns:
         Tuple of (success, message).
@@ -138,12 +140,14 @@ def create_venv(
     if python_version:
         python_exe = find_python_executable(python_version)
         if not python_exe:
-            return False, f"Python {python_version} not found. Install it first with: pyvm install {python_version}.0"
+            return (
+                False,
+                f"Python {python_version} not found. Install it first with: pyvm install {python_version}.0",
+            )
     else:
         python_exe = sys.executable
         python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 
-    # Build venv command
     cmd = [python_exe, "-m", "venv"]
     if system_site_packages:
         cmd.append("--system-site-packages")
@@ -166,10 +170,49 @@ def create_venv(
         }
         save_venv_registry(registry)
 
-        return True, f"Created venv '{name}' at {venv_path}"
+        success_msg = f"Created venv '{name}' at {venv_path}"
+
+        # Install requirements if specified
+        if requirements_file:
+            os_name, _ = get_os_info()
+            if os_name == "windows":
+                pip_exe = venv_path / "Scripts" / "pip.exe"
+            else:
+                pip_exe = venv_path / "bin" / "pip"
+
+            if not pip_exe.exists():
+                if os_name == "windows":
+                    python_in_venv = venv_path / "Scripts" / "python.exe"
+                else:
+                    python_in_venv = venv_path / "bin" / "python"
+                pip_cmd = [str(python_in_venv), "-m", "pip"]
+            else:
+                pip_cmd = [str(pip_exe)]
+
+            try:
+                # Upgrade pip first (optional helper)
+                # subprocess.run(pip_cmd + ["install", "--upgrade", "pip"], capture_output=True, check=False)
+
+                # Install requirements
+                subprocess.run(
+                    pip_cmd + ["install", "-r", str(requirements_file)], capture_output=True, text=True, check=True
+                )
+                success_msg += f"\n   Installed requirements from {requirements_file.name}"
+            except subprocess.CalledProcessError as e:
+                error_output = e.stderr or e.stdout
+                return (
+                    True,
+                    f"{success_msg}\n   ⚠️ Warning: Failed to install requirements from {requirements_file.name}:\n"
+                    f"{error_output}",
+                )
+
+        return True, success_msg
 
     except subprocess.CalledProcessError as e:
-        return False, f"Failed to create venv: {e.stderr or e.stdout or str(e)}"
+        return (
+            False,
+            f"Failed to create venv: {e.stderr or e.stdout or str(e)}",
+        )
     except OSError as e:
         return False, f"Failed to create venv: {e}"
 

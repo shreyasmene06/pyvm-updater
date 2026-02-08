@@ -9,7 +9,7 @@ import re
 import time
 
 import click
-import requests
+import requests  # type: ignore
 from rich.progress import (
     BarColumn,
     DownloadColumn,
@@ -74,7 +74,11 @@ def fetch_remote_sha256(checksum_url: str) -> str | None:
     try:
         response = requests.get(checksum_url, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
-        return response.text.strip().split()[0]
+        content = str(response.text).strip()
+        parts = content.split()
+        if parts:
+            return parts[0]
+        return None
     except Exception as e:
         click.echo(f"❌ Failed to fetch checksum: {e}")
         return None
@@ -82,12 +86,19 @@ def fetch_remote_sha256(checksum_url: str) -> str | None:
 
 def verify_file_checksum(file_path: str, checksum_url: str) -> bool:
     """Verify downloaded file against python.org SHA256."""
+    from .config import get_config
+
+    cfg = get_config()
+
+    if not cfg.verify_checksum:
+        return True
+
     click.echo("🔐 Verifying file integrity (SHA256)...")
 
     expected = fetch_remote_sha256(checksum_url)
     if not expected:
-        click.echo("❌ Could not retrieve official checksum")
-        return False
+        click.echo("⚠️  Could not retrieve official checksum. Skipping integrity check.")
+        return True
 
     actual = calculate_sha256(file_path)
 

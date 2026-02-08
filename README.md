@@ -32,9 +32,18 @@ pyvm provides a safe and convenient way to manage multiple Python versions on yo
 
 - Never modifies system Python defaults
 - SHA256 checksum verification for all downloads
-- Smart installation using mise, pyenv, or system package managers
+- Smart installation using mise, pyenv, conda, or system package managers
+- Plugin system for custom installers (see [Plugins](#plugin-system))
 - Rollback support to undo installations
 - Multiple Python versions coexist without conflicts
+
+## Plugin System
+
+pyvm supports custom installation backends through a plugin system. You can add your own installers by placing Python files in `~/.config/pyvm/plugins/`.
+
+### Security Note
+> [!WARNING]
+> **Custom plugins are executed as arbitrary Python code.** Only install plugins from trusted sources. pyvm will load and execute any `.py` file found in the plugins directory during startup.
 
 ## Installation
 

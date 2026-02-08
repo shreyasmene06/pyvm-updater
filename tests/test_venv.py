@@ -45,6 +45,29 @@ class TestCreateVenv:
         assert success is False
         assert "already exists" in message
 
+    def test_create_venv_with_requirements(self, temp_venv_dir):
+        """Test venv creation with requirements file."""
+        venv_path = temp_venv_dir / "req_venv"
+        req_file = temp_venv_dir / "requirements.txt"
+        req_file.write_text("requests==2.25.0")
+
+        with patch("pyvm_updater.venv.get_venv_dir", return_value=temp_venv_dir):
+            with patch("pyvm_updater.venv.save_venv_registry"):
+                with patch("pyvm_updater.venv.subprocess.run") as mock_run:
+                    success, message = create_venv("req_venv", path=venv_path, requirements_file=req_file)
+
+        assert success is True
+        assert "Installed requirements" in message
+
+        # Verify pip install was called
+        assert mock_run.call_count == 2
+
+        args, _ = mock_run.call_args_list[1]
+        cmd = args[0]
+        assert "install" in cmd
+        assert "-r" in cmd
+        assert str(req_file) in cmd
+
 
 class TestListVenvs:
     """Tests for list_venvs function."""

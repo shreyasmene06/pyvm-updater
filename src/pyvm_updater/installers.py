@@ -2,522 +2,79 @@
 
 from __future__ import annotations
 
-import os
-import platform
-import shutil
-import subprocess
-import tempfile
+from typing import Any
 
 import click
-import requests
 
-from .constants import REQUEST_TIMEOUT
-from .utils import download_file, validate_version_string, verify_file_checksum
-from .version import is_python_version_installed
+from .config import get_config
+from .plugins.manager import get_plugin_manager
 
 
-def install_pyenv_linux() -> bool:
-    """Install pyenv on Linux (yum/dnf systems)."""
-    print("\n[Linux] Installing pyenv...")
-
-    if not shutil.which("curl"):
-        print("Error: 'curl' is required to install pyenv.")
-        return False
-
-    if not shutil.which("bash"):
-        print("Error: 'bash' is required to install pyenv.")
-        return False
-
-    pkg_mgr = "dnf" if shutil.which("dnf") else "yum"
-
-    deps = [
-        "git",
-        "gcc",
-        "zlib-devel",
-        "bzip2-devel",
-        "readline-devel",
-        "sqlite-devel",
-        "openssl-devel",
-        "xz-devel",
-        "libffi-devel",
-        "findutils",
-    ]
-
-    try:
-        if shutil.which("sudo"):
-            subprocess.run(["sudo", pkg_mgr, "install", "-y"] + deps, check=True)
-        else:
-            subprocess.run([pkg_mgr, "install", "-y"] + deps, check=True)
-    except Exception as e:
-        print(f"Error installing dependencies: {e}")
-        return False
-
-    print("Running pyenv-installer (https://pyenv.run)...")
-    try:
-        response = requests.get("https://pyenv.run", timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        subprocess.run(["bash"], input=response.text, text=True, check=True)
-    except Exception as e:
-        print(f"Error running pyenv-installer: {e}")
-        return False
-
-    pyenv_root = os.path.expanduser("~/.pyenv")
-    os.environ["PYENV_ROOT"] = pyenv_root
-
-    bin_path = os.path.join(pyenv_root, "bin")
-    shim_path = os.path.join(pyenv_root, "shims")
-    os.environ["PATH"] = f"{bin_path}:{shim_path}:" + os.environ.get("PATH", "")
-
-    print("\n[OK] pyenv installed successfully!")
-    print("\nIMPORTANT: Add these to your ~/.bashrc:")
-    print("-" * 60)
-    print('export PYENV_ROOT="$HOME/.pyenv"')
-    print('[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"')
-    print('eval "$(pyenv init -)"')
-    print("-" * 60)
-
-    return True
-
-
-def update_python_windows(version_str: str) -> bool:
+def update_python_windows(version_str: str, preferred: str = "auto", **kwargs: Any) -> bool:
     """Update Python on Windows."""
-    print("\n🪟 Windows detected - Downloading Python installer...")
-
-    if not validate_version_string(version_str):
-        print(f"Error: Invalid version string: {version_str}")
-        return False
-
-    try:
-        parts = version_str.split(".")
-        if len(parts) < 3:
-            print(f"Error: Version must be major.minor.patch format: {version_str}")
-            return False
-        major, minor, _patch = parts[0], parts[1], parts[2]
-    except (ValueError, IndexError) as e:
-        print(f"Error parsing version: {e}")
-        return False
-
-    machine = platform.machine().lower()
-    if machine in ["amd64", "x86_64"]:
-        arch = "amd64"
-    elif machine in ["arm64", "aarch64"]:
-        try:
-            major_int, minor_int = int(major), int(minor)
-            if major_int < 3 or (major_int == 3 and minor_int < 11):
-                print("ARM64 installers are only available for Python 3.11+")
-                arch = "amd64"
-            else:
-                arch = "arm64"
-        except (ValueError, TypeError):
-            arch = "amd64"
-    else:
-        arch = "win32"
-
-    installer_url = f"https://www.python.org/ftp/python/{version_str}/python-{version_str}-{arch}.exe"
-    temp_dir = tempfile.gettempdir()
-    installer_path = os.path.join(temp_dir, f"python-{version_str}-installer.exe")
-
-    print(f"Downloading from: {installer_url}")
-    if not download_file(installer_url, installer_path):
-        return False
-
-    checksum_url = installer_url + ".sha256"
-    if not verify_file_checksum(installer_path, checksum_url):
-        click.echo("❌ Aborting installation due to integrity check failure")
-        try:
-            os.remove(installer_path)
-        except OSError:
-            pass
-        return False
-
-    print("\n⚠️  Starting installer...")
-    print("Please follow the installer prompts.")
-
-    try:
-        result = subprocess.run([installer_path], check=False)
-        if result.returncode != 0:
-            print(f"Warning: Installer exited with code {result.returncode}")
-        return True
-    except FileNotFoundError:
-        print(f"Error: Installer not found at {installer_path}")
-        return False
-    except PermissionError:
-        print("Error: Permission denied. Try running as Administrator.")
-        return False
-    except Exception as e:
-        print(f"Error running installer: {e}")
-        return False
-    finally:
-        try:
-            if os.path.exists(installer_path):
-                os.remove(installer_path)
-        except OSError:
-            pass
+    return _install_with_plugins(version_str, preferred=preferred)
 
 
-def update_python_linux(version_str: str, build_from_source: bool = False) -> bool:
-    """Install Python on Linux using mise, pyenv, or package manager."""
-    print("\n[Linux] Installing Python...")
+def update_python_linux(
+    version_str: str, build_from_source: bool = False, preferred: str = "auto", **kwargs: Any
+) -> bool:
+    """Install Python on Linux."""
+    if preferred == "auto" and build_from_source:
+        preferred = "source"
+    elif preferred == "auto":
+        preferred = get_config().preferred_installer
 
-    if build_from_source:
-        print(f"⚙️ Preparing build environment for {version_str}...")
-        # Step 1: Ensure dependencies are installed using existing project logic
-        install_pyenv_linux()
-
-        # Step 2: Define paths using author's filesystem pattern
-        source_url = f"https://www.python.org/ftp/python/{version_str}/Python-{version_str}.tar.xz"
-        temp_dir = tempfile.gettempdir()
-        source_path = os.path.join(temp_dir, f"Python-{version_str}.tar.xz")
-
-        # Step 3: Use author's standardized download utility from utils.py
-        if not download_file(source_url, source_path):
-            print("❌ Failed to download source code.")
-            return False
-
-        build_dir = os.path.join(temp_dir, f"Python-{version_str}")
-        try:
-            print("📦 Extracting and Compiling (this will take a few minutes)...")
-            subprocess.run(["tar", "-xf", source_path, "-C", temp_dir], check=True)
-
-            # Step 4: Safe parallel build (No shell=True)
-            cpu_cores = str(os.cpu_count() or 2)
-            subprocess.run(["./configure", "--enable-optimizations"], cwd=build_dir, check=True)
-            subprocess.run(["make", f"-j{cpu_cores}"], cwd=build_dir, check=True)
-            subprocess.run(["sudo", "make", "altinstall"], cwd=build_dir, check=True)
-
-            return True
-        except Exception as e:
-            print(f"❌ Build failed: {e}")
-            return False
-        finally:
-            # Step 5: Clean up the filesystem using shutil.rmtree
-            if os.path.exists(build_dir):
-                shutil.rmtree(build_dir, ignore_errors=True)
-
-    # Standard validation follows if not building from source
-    if not validate_version_string(version_str):
-        print(f"Error: Invalid version string: {version_str}")
-        return False
-
-    try:
-        parts = version_str.split(".")
-        if len(parts) < 2:
-            print(f"Error: Invalid version format: {version_str}")
-            return False
-        major_minor = f"{parts[0]}.{parts[1]}"
-    except (ValueError, IndexError) as e:
-        print(f"Error parsing version: {e}")
-        return False
-
-    # mise
-    if shutil.which("mise"):
-        print("Using mise to install Python...")
-        try:
-            result = subprocess.run(["mise", "install", f"python@{version_str}"], check=False)
-            if result.returncode != 0:
-                result = subprocess.run(["mise", "install", f"python@{major_minor}"], check=False)
-            if result.returncode == 0:
-                print(f"\n[OK] Python {version_str} installed via mise!")
-                print(f"\nTo use: mise use python@{version_str}")
-                return True
-        except Exception as e:
-            print(f"mise error: {e}")
-
-    # pyenv
-    if shutil.which("pyenv"):
-        print("Using pyenv to install Python...")
-        try:
-            result = subprocess.run(["pyenv", "install", version_str], check=False)
-            if result.returncode == 0:
-                print(f"\n[OK] Python {version_str} installed via pyenv!")
-                return True
-        except Exception as e:
-            print(f"pyenv error: {e}")
-
-    # apt
-    if shutil.which("apt"):
-        print("Using apt package manager...")
-        commands = [
-            ["sudo", "apt", "update"],
-            ["sudo", "apt", "install", "-y", "software-properties-common"],
-            ["sudo", "add-apt-repository", "-y", "ppa:deadsnakes/ppa"],
-            ["sudo", "apt", "update"],
-            ["sudo", "apt", "install", "-y", f"python{major_minor}"],
-            ["sudo", "apt", "install", "-y", f"python{major_minor}-venv", f"python{major_minor}-distutils"],
-        ]
-
-        for cmd in commands:
-            print(f"Running: {' '.join(cmd)}")
-            try:
-                result = subprocess.run(cmd, check=False)
-                if result.returncode != 0:
-                    print(f"Warning: Command returned {result.returncode}")
-            except Exception as e:
-                print(f"Error: {e}")
-                return False
-
-        python_path = f"/usr/bin/python{major_minor}"
-        if os.path.exists(python_path):
-            print(f"\n[OK] Python {major_minor} installed at {python_path}")
-            return True
-
-    # dnf/yum
-    elif shutil.which("dnf") or shutil.which("yum"):
-        pkg_mgr = "dnf" if shutil.which("dnf") else "yum"
-        print(f"Using {pkg_mgr}...")
-        print(f"\nSpecific Python versions might not be available in {pkg_mgr}.")
-        if click.confirm("Install pyenv automatically?"):
-            if install_pyenv_linux() and shutil.which("pyenv"):
-                try:
-                    result = subprocess.run(["pyenv", "install", version_str], check=False)
-                    if result.returncode == 0:
-                        print(f"\n[OK] Python {version_str} installed via pyenv!")
-                        return True
-                except Exception as e:
-                    print(f"pyenv error: {e}")
-
-    print("\nNo package manager found. Install mise: curl https://mise.run | sh")
-    return False
+    return _install_with_plugins(version_str, preferred=preferred, **kwargs)
 
 
-def update_python_macos(version_str: str) -> bool:
+def update_python_macos(version_str: str, preferred: str = "auto", **kwargs: Any) -> bool:
     """Update Python on macOS."""
-    print("\n[macOS] Installing Python...")
+    return _install_with_plugins(version_str, preferred=preferred, **kwargs)
 
-    if not validate_version_string(version_str):
-        print(f"Error: Invalid version string: {version_str}")
+
+def _install_with_plugins(version_str: str, preferred: str = "auto", **kwargs: Any) -> bool:
+    """Generic installation logic using the plugin system."""
+    pm = get_plugin_manager()
+    installer = pm.get_best_installer(preferred=preferred)
+
+    if not installer:
+        click.echo("❌ No supported installer found for your system.")
         return False
 
-    try:
-        parts = version_str.split(".")
-        if len(parts) < 2:
-            print(f"Error: Invalid version format: {version_str}")
-            return False
-        major = int(parts[0])
-        minor = int(parts[1])
-        major_minor = f"{major}.{minor}"
-    except (ValueError, IndexError) as e:
-        print(f"Error parsing version: {e}")
-        return False
+    if preferred != "auto" and installer.get_name() != preferred:
+        click.echo(
+            f"⚠️  Requested installer '{preferred}' is not supported or not found. "
+            f"Falling back to '{installer.get_name()}'."
+        )
 
-    # mise
-    if shutil.which("mise"):
-        print("Using mise to install Python...")
-        try:
-            result = subprocess.run(["mise", "install", f"python@{version_str}"], check=False)
-            if result.returncode != 0:
-                result = subprocess.run(["mise", "install", f"python@{major_minor}"], check=False)
-            if result.returncode == 0:
-                print(f"\n[OK] Python {version_str} installed via mise!")
-                return True
-        except Exception as e:
-            print(f"mise error: {e}")
-
-    # pyenv
-    if shutil.which("pyenv"):
-        print("Using pyenv to install Python...")
-        try:
-            result = subprocess.run(["pyenv", "install", version_str], check=False)
-            if result.returncode == 0:
-                print(f"\n[OK] Python {version_str} installed via pyenv!")
-                return True
-        except Exception as e:
-            print(f"pyenv error: {e}")
-
-    # brew
-    if shutil.which("brew"):
-        print("Using Homebrew...")
-        try:
-            subprocess.run(["brew", "update"], check=False, capture_output=True)
-            result = subprocess.run(["brew", "install", f"python@{major_minor}"], check=False)
-            if result.returncode == 0:
-                print(f"[OK] Python {version_str} installed via Homebrew")
-                return True
-        except Exception as e:
-            print(f"Homebrew error: {e}")
-
-    # Official installer
-    print("\nUsing official Python.org installer...")
-    if major > 3 or (major == 3 and minor >= 9):
-        installer_suffix = "macos11.pkg"
-    else:
-        installer_suffix = "macosx10.9.pkg"
-
-    installer_filename = f"python-{version_str}-{installer_suffix}"
-    macos_installer_url = f"https://www.python.org/ftp/python/{version_str}/{installer_filename}"
-
-    temp_dir = tempfile.gettempdir()
-    installer_path = os.path.join(temp_dir, installer_filename)
-
-    print(f"Downloading from: {macos_installer_url}")
-    if not download_file(macos_installer_url, installer_path):
-        return False
-
-    print("\n⚠️  Starting installer...")
-    try:
-        subprocess.run(["sudo", "installer", "-pkg", installer_path, "-target", "/"], check=True)
-        print(f"\n[OK] Python {version_str} successfully installed!")
-        return True
-    except subprocess.CalledProcessError:
-        print("Error: Installer failed.")
-        return False
-    except PermissionError:
-        print("Error: Permission denied.")
-        return False
-    finally:
-        if os.path.exists(installer_path):
-            try:
-                os.remove(installer_path)
-            except OSError:
-                pass
+    return installer.install(version_str, **kwargs)
 
 
 def remove_python_windows(version_str: str) -> bool:
     """Remove Python on Windows."""
-    print(f"\n[Windows] Attempting to remove Python {version_str}...")
-
-    if not is_python_version_installed(version_str):
-        print(f"Error: Python {version_str} is not installed.")
-        return False
-
-    current_ver = platform.python_version()
-    current_parts = current_ver.split(".")
-    target_parts = version_str.split(".")
-
-    if len(current_parts) >= 2 and len(target_parts) >= 2:
-        if current_parts[0] == target_parts[0] and current_parts[1] == target_parts[1]:
-            print(f"Error: Cannot remove Python {version_str} (running version).")
-            return False
-
-    # Try winget
-    if shutil.which("winget"):
-        major_minor = ".".join(version_str.split(".")[:2])
-        potential_ids = [f"Python.Python.{major_minor}", f"PythonSoftwareFoundation.Python.{major_minor}"]
-
-        for pkg_id in potential_ids:
-            try:
-                result = subprocess.run(
-                    ["winget", "uninstall", "--id", pkg_id, "--silent"], capture_output=True, text=True, check=False
-                )
-                if result.returncode == 0:
-                    print(f"[OK] Python {version_str} removed via winget")
-                    return True
-            except Exception:
-                continue
-
-    print("\n[Notice] Automated uninstallation on Windows encountered issues.")
-    print("Please remove manually via Windows Settings -> Apps.")
-    return False
+    return _uninstall_with_plugins(version_str)
 
 
 def remove_python_linux(version_str: str) -> bool:
     """Remove Python on Linux."""
-    print(f"\n[Linux] Attempting to remove Python {version_str}...")
-
-    if not is_python_version_installed(version_str):
-        print(f"Error: Python {version_str} is not installed.")
-        return False
-
-    try:
-        parts = version_str.split(".")
-        major_minor = f"{parts[0]}.{parts[1]}"
-        current_parts = platform.python_version().split(".")
-        current_major_minor = f"{current_parts[0]}.{current_parts[1]}"
-
-        if major_minor == current_major_minor:
-            print(f"Error: Cannot remove Python {version_str} (running version).")
-            return False
-    except (ValueError, IndexError):
-        pass
-
-    # mise
-    if shutil.which("mise"):
-        try:
-            result = subprocess.run(
-                ["mise", "uninstall", f"python@{version_str}"],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                print(f"[OK] Python {version_str} uninstalled via mise.")
-                return True
-        except Exception:
-            pass
-
-    # pyenv
-    if shutil.which("pyenv"):
-        try:
-            result = subprocess.run(
-                ["pyenv", "uninstall", "-f", version_str],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                print(f"[OK] Python {version_str} uninstalled via pyenv.")
-                return True
-        except Exception:
-            pass
-
-    print("\nCould not find a safe automated way to remove this Python installation.")
-    return False
+    return _uninstall_with_plugins(version_str)
 
 
 def remove_python_macos(version_str: str) -> bool:
     """Remove Python on macOS."""
-    print(f"\n[macOS] Attempting to remove Python {version_str}...")
+    return _uninstall_with_plugins(version_str)
 
-    if not is_python_version_installed(version_str):
-        print(f"Error: Python {version_str} is not installed.")
-        return False
 
-    try:
-        parts = version_str.split(".")
-        major_minor = f"{parts[0]}.{parts[1]}"
-        current_parts = platform.python_version().split(".")
-        current_major_minor = f"{current_parts[0]}.{current_parts[1]}"
+def _uninstall_with_plugins(version_str: str) -> bool:
+    """Generic uninstallation logic using the plugin system."""
+    pm = get_plugin_manager()
+    # Try all supported installers until one succeeds
+    for installer in pm.get_supported_plugins():
+        if installer.uninstall(version_str):
+            click.echo(f"[OK] Python {version_str} uninstalled via {installer.get_name()}.")
+            return True
 
-        if major_minor == current_major_minor:
-            print(f"Error: Cannot remove Python {version_str} (running version).")
-            return False
-    except (ValueError, IndexError):
-        pass
-
-    # mise
-    if shutil.which("mise"):
-        try:
-            result = subprocess.run(["mise", "uninstall", f"python@{version_str}"], check=False)
-            if result.returncode == 0:
-                print(f"[OK] Python {version_str} uninstalled via mise.")
-                return True
-        except Exception:
-            pass
-
-    # pyenv
-    if shutil.which("pyenv"):
-        try:
-            result = subprocess.run(["pyenv", "uninstall", "-f", version_str], check=False)
-            if result.returncode == 0:
-                print(f"[OK] Python {version_str} uninstalled via pyenv.")
-                return True
-        except Exception:
-            pass
-
-    # brew
-    if shutil.which("brew"):
-        try:
-            pkg_name = f"python@{major_minor}"
-            check_brew = subprocess.run(["brew", "list", pkg_name], capture_output=True, text=True, check=False)
-            if check_brew.returncode == 0:
-                subprocess.run(["brew", "uninstall", pkg_name], check=False)
-                return True
-        except Exception:
-            pass
-
-    print("\n[Notice] To remove manually, delete:")
-    print(f"1. /Applications/Python {major_minor}")
-    print(f"2. /Library/Frameworks/Python.framework/Versions/{major_minor}")
+    click.echo(f"❌ Could not find an automated way to remove Python {version_str}.")
     return False
 
 

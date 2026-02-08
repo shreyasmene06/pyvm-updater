@@ -8,12 +8,13 @@ import platform
 import shutil
 import subprocess
 import sys
+from typing import Any
 
 import click
 import requests
 
 from . import __version__
-from .config import Config, get_config
+from .config import get_config
 from .constants import HISTORY_FILE
 from .history import HistoryManager
 from .installers import (
@@ -138,12 +139,19 @@ def check() -> None:
 @click.argument("version")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 @click.option("--build-from-source", is_flag=True, help="Compile Python from source (Linux only)")
-def install(version: str, yes: bool, build_from_source: bool = False) -> None:
+@click.option("--installer", "-i", default="auto", help="Preferred installer plugin to use")
+def install(
+    version: str,
+    yes: bool,
+    build_from_source: bool = False,
+    installer: str = "auto",
+) -> None:
     """Install a specific Python version.
 
     Examples:
         pyvm install 3.12.1
         pyvm install 3.11.5 --yes
+        pyvm install 3.12.1 --installer pyenv
     """
     try:
         if not validate_version_string(version) or len(version.split(".")) < 3:
@@ -171,11 +179,11 @@ def install(version: str, yes: bool, build_from_source: bool = False) -> None:
 
         success = False
         if os_name == "windows":
-            success = update_python_windows(version)
+            success = update_python_windows(version, preferred=installer)
         elif os_name == "linux":
-            success = update_python_linux(version, build_from_source)
+            success = update_python_linux(version, build_from_source, preferred=installer)
         elif os_name == "darwin":
-            success = update_python_macos(version)
+            success = update_python_macos(version, preferred=installer)
         else:
             click.echo(f"Unsupported operating system: {os_name}")
             sys.exit(1)
@@ -239,7 +247,13 @@ def remove(version: str, yes: bool) -> None:
 
 
 @cli.command("list")
-@click.option("--all", "-a", "show_all", is_flag=True, help="Show all versions including patch releases")
+@click.option(
+    "--all",
+    "-a",
+    "show_all",
+    is_flag=True,
+    help="Show all versions including patch releases",
+)
 def list_versions(show_all: bool) -> None:
     """List available Python versions."""
     try:
@@ -316,7 +330,13 @@ def list_versions(show_all: bool) -> None:
 @click.option("--auto", is_flag=True, help="Automatically proceed without confirmation")
 @click.option("--version", "target_version", default=None, help="Specify a target Python version")
 @click.option("--build-from-source", is_flag=True, help="Compile Python from source (Linux only)")
-def update(auto: bool, target_version: str | None, build_from_source: bool = False) -> None:
+@click.option("--installer", "-i", default="auto", help="Preferred installer plugin to use")
+def update(
+    auto: bool,
+    target_version: str | None,
+    build_from_source: bool = False,
+    installer: str = "auto",
+) -> None:
     """Download and install Python version (does NOT modify system defaults)."""
     try:
         local_ver = platform.python_version()
@@ -359,11 +379,11 @@ def update(auto: bool, target_version: str | None, build_from_source: bool = Fal
 
         success = False
         if os_name == "windows":
-            success = update_python_windows(install_version)
+            success = update_python_windows(install_version, preferred=installer)
         elif os_name == "linux":
-            success = update_python_linux(install_version, build_from_source)
+            success = update_python_linux(install_version, build_from_source, preferred=installer)
         elif os_name == "darwin":
-            success = update_python_macos(install_version)
+            success = update_python_macos(install_version, preferred=installer)
         else:
             click.echo(f"❌ Unsupported operating system: {os_name}")
             sys.exit(1)
@@ -433,9 +453,15 @@ def info() -> None:
 @click.option("--show", is_flag=True, help="Show current configuration")
 @click.option("--init", "init_config", is_flag=True, help="Create default config file")
 @click.option("--path", is_flag=True, help="Show config file path")
-def config(show: bool, init_config: bool, path: bool) -> None:
+@click.option(
+    "--set",
+    "set_kv",
+    nargs=2,
+    help="Set a config value (e.g., --set general.preferred_installer pyenv)",
+)
+def config(show: bool, init_config: bool, path: bool, set_kv: tuple[str, str] | None) -> None:
     """View or manage pyvm configuration."""
-    from .config import CONFIG_FILE
+    from .config import CONFIG_FILE, get_config
 
     if path:
         click.echo(f"Config file: {CONFIG_FILE}")
@@ -450,7 +476,7 @@ def config(show: bool, init_config: bool, path: bool) -> None:
             click.echo(f"Config file already exists: {CONFIG_FILE}")
             return
 
-        cfg = Config()
+        cfg = get_config()
         if cfg.save():
             click.echo(f"Created config file: {CONFIG_FILE}")
         else:
@@ -458,8 +484,35 @@ def config(show: bool, init_config: bool, path: bool) -> None:
             sys.exit(1)
         return
 
-    # Default: show current config
     cfg = get_config()
+
+    if set_kv:
+        key_path, value = set_kv
+        if "." not in key_path:
+            click.echo("Error: Key must be in format 'section.key' (e.g., 'general.auto_confirm')")
+            sys.exit(1)
+
+        section, key = key_path.split(".", 1)
+
+        # Type conversion for common values
+        if value.lower() == "true":
+            typed_value: Any = True
+        elif value.lower() == "false":
+            typed_value = False
+        elif value.isdigit():
+            typed_value = int(value)
+        else:
+            typed_value = value
+
+        cfg.set(section, key, typed_value)
+        if cfg.save():
+            click.echo(f"✅ Set {key_path} = {typed_value}")
+        else:
+            click.echo("❌ Failed to save configuration.")
+            sys.exit(1)
+        return
+
+    # Default: show current config
     click.echo("Current Configuration:")
     click.echo("-" * 40)
     click.echo(f"Auto-confirm:       {cfg.auto_confirm}")
@@ -470,6 +523,18 @@ def config(show: bool, init_config: bool, path: bool) -> None:
     click.echo(f"Download timeout:   {cfg.download_timeout}s")
     click.echo(f"TUI theme:          {cfg.tui_theme}")
     click.echo("-" * 40)
+
+    from .plugins.manager import get_plugin_manager
+
+    pm = get_plugin_manager()
+    click.echo("\nDetected Installers:")
+    click.echo("-" * 40)
+    for plugin in pm.get_all_plugins():
+        status = "✅ Supported" if plugin.is_supported() else "❌ Not Found"
+        priority = plugin.get_priority()
+        click.echo(f"{plugin.get_name():<12} {status:<15} (Priority: {priority})")
+    click.echo("-" * 40)
+
     click.echo(f"\nConfig file: {CONFIG_FILE}")
     if not CONFIG_FILE.exists():
         click.echo("(Using defaults. Run 'pyvm config --init' to create config file.)")
@@ -487,29 +552,40 @@ def venv() -> None:
 @click.option("--python", "-p", "python_version", help="Python version to use (e.g., 3.12)")
 @click.option("--path", type=click.Path(), help="Custom path for the venv")
 @click.option("--system-site-packages", is_flag=True, help="Include system site-packages")
-def venv_create(name: str, python_version: str | None, path: str | None, system_site_packages: bool) -> None:
+@click.option("--requirements", "-r", type=click.Path(exists=True), help="Install dependencies from requirements file")
+def venv_create(
+    name: str,
+    python_version: str | None,
+    path: str | None,
+    system_site_packages: bool,
+    requirements: str | None,
+) -> None:
     """Create a new virtual environment.
 
     Examples:
         pyvm venv create myproject
         pyvm venv create myproject --python 3.12
-        pyvm venv create myproject --path ./venv
+        pyvm venv create myproject --requirements requirements.txt
     """
     from pathlib import Path as PathLib
 
     from .venv import create_venv
 
     venv_path = PathLib(path) if path else None
+    req_path = PathLib(requirements) if requirements else None
 
     click.echo(f"Creating venv '{name}'...")
     if python_version:
         click.echo(f"Using Python {python_version}")
+    if req_path:
+        click.echo(f"Installing dependencies from {req_path.name}")
 
     success, message = create_venv(
         name=name,
         python_version=python_version,
         path=venv_path,
         system_site_packages=system_site_packages,
+        requirements_file=req_path,
     )
 
     if success:
@@ -642,6 +718,133 @@ def doctor():
         click.secho(" System is healthy and ready to use!", fg="bright_cyan", bold=True)
     else:
         click.secho(" Some checks failed. Please resolve the red items above.", fg="yellow")
+
+
+@cli.command("use")
+@click.argument("version")
+def use_version(version: str) -> None:
+    """Temporarily set Python version for current shell session (spawns subshell).
+
+    This command will:
+    1. Find the requested Python executable
+    2. Create a temporary session environment using symlinks
+    3. Spawn a new shell with this environment active
+    4. Clean up when you exit the shell
+
+    Type 'exit' to return to your normal shell session.
+    """
+    import os
+    import shutil
+    import tempfile
+
+    from .venv import find_python_executable
+
+    try:
+        if not validate_version_string(version):
+            click.echo(f"Error: Invalid version format: {version}")
+            sys.exit(1)
+
+        # Locate Python
+        python_exe = find_python_executable(version)
+        if not python_exe:
+            click.echo(f"❌ Python {version} not found.")
+            click.echo("\nInstalled versions:")
+            from .version import get_installed_python_versions
+
+            for v in get_installed_python_versions():
+                if not v.get("default"):
+                    click.echo(f"  - {v['version']}")
+
+            click.echo(f"\nInstall it with: pyvm install {version}")
+            sys.exit(1)
+
+        click.echo(f"Found Python {version} at: {python_exe}")
+
+        # Prepare session
+        session_dir = tempfile.mkdtemp(prefix=f"pyvm_session_{version}_")
+        bin_dir = os.path.join(session_dir, "bin")
+        os.makedirs(bin_dir, exist_ok=True)
+
+        # Determine executable names based on OS
+        os_name, _ = get_os_info()
+        is_windows = os_name == "windows"
+
+        exe_name = "python.exe" if is_windows else "python"
+
+        try:
+            target = python_exe
+            link_path = os.path.join(bin_dir, exe_name)
+
+            if is_windows:
+                # Windows usually puts python in root of install dir, not bin
+                try:
+                    os.symlink(target, link_path)
+                except OSError:
+                    # Fallback: simple shim
+                    with open(os.path.join(bin_dir, "python.bat"), "w") as f:
+                        f.write(f'@echo off\n"{target}" %*')
+            else:
+                os.symlink(target, link_path)
+                # Also link python3 if appropriate
+                if not os.path.exists(os.path.join(bin_dir, "python3")):
+                    os.symlink(target, os.path.join(bin_dir, "python3"))
+
+            # Handle pip
+            pip_name = "pip.exe" if is_windows else "pip"
+            target_dir = os.path.dirname(target)
+
+            # Pip location strategy
+            possible_pips = [os.path.join(target_dir, pip_name)]
+            if is_windows:
+                possible_pips.append(os.path.join(target_dir, "Scripts", pip_name))
+
+            for pip_path in possible_pips:
+                if os.path.exists(pip_path):
+                    try:
+                        os.symlink(pip_path, os.path.join(bin_dir, pip_name))
+                        break
+                    except OSError:
+                        pass
+
+        except Exception as e:
+            click.echo(f"Error preparing session: {e}")
+            shutil.rmtree(session_dir)
+            sys.exit(1)
+
+        # Spawn shell
+        current_shell = os.environ.get("SHELL", "/bin/bash")
+        if is_windows:
+            current_shell = os.environ.get("COMSPEC", "cmd.exe")
+
+        env = os.environ.copy()
+
+        # Prepend to PATH
+        if is_windows:
+            env["PATH"] = f"{bin_dir};{env.get('PATH', '')}"
+        else:
+            env["PATH"] = f"{bin_dir}:{env.get('PATH', '')}"
+
+        # Set prompt indicator if possible
+        if not is_windows:
+            env["PYVM_OLD_PS1"] = env.get("PS1", "")
+            env["PYVM_VERSION"] = version
+
+        click.echo("\n" + "=" * 50)
+        click.echo(f"🎉 Entering temporary shell for Python {version}")
+        click.echo("ℹ️  Type 'exit' or Press Ctrl+D to return.")
+        click.echo("=" * 50 + "\n")
+
+        try:
+            subprocess.run([current_shell], env=env)
+        except Exception as e:
+            click.echo(f"Error running shell: {e}")
+        finally:
+            click.echo(f"\nExiting Python {version} session...")
+            shutil.rmtree(session_dir)
+
+    except Exception as e:
+        click.echo(f"\nError: {e}")
+        sys.exit(1)
 
 
 def main() -> None:

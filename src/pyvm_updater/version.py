@@ -10,7 +10,7 @@ import sys
 import time
 from typing import Any
 
-import requests
+import requests  # type: ignore
 from bs4 import BeautifulSoup
 from packaging import version as pkg_version
 
@@ -34,10 +34,49 @@ def get_installed_python_versions() -> list[dict[str, Any]]:
                     if match:
                         ver = match.group(1)
                         is_default = "*" in line
+                        is_store = "(Store)" in line
                         if ver not in found:
                             found.add(ver)
-                            versions.append({"version": ver, "path": None, "default": is_default})
+                            versions.append(
+                                {
+                                    "version": ver,
+                                    "path": None,
+                                    "default": is_default,
+                                    "store": is_store,
+                                }
+                            )
         except FileNotFoundError:
+            pass
+
+        # Explicitly check for Store versions if py --list didn't catch them or to get paths
+        try:
+            # Check %LOCALAPPDATA%\Microsoft\WindowsApps for python3.x.exe
+            apps_dir = os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WindowsApps")
+            if os.path.isdir(apps_dir):
+                for entry in os.listdir(apps_dir):
+                    match = re.match(r"python(3\.\d+)\.exe", entry, re.IGNORECASE)
+                    if match:
+                        ver = match.group(1)
+                        if ver not in found:
+                            found.add(ver)
+                            full_path = os.path.join(apps_dir, entry)
+                            versions.append(
+                                {
+                                    "version": ver,
+                                    "path": full_path,
+                                    "default": full_path == sys.executable,
+                                    "store": True,
+                                }
+                            )
+                        else:
+                            # Update existing entry with path if it's a store version
+                            for v in versions:
+                                if v["version"] == ver:
+                                    v["store"] = True
+                                    if not v["path"]:
+                                        v["path"] = os.path.join(apps_dir, entry)
+                                    break
+        except Exception:
             pass
     else:
         # mise
@@ -81,7 +120,12 @@ def get_installed_python_versions() -> list[dict[str, Any]]:
                 pass
 
         # system paths
-        search_paths = ["/usr/bin", "/usr/local/bin", "/opt/homebrew/bin", os.path.expanduser("~/.local/bin")]
+        search_paths = [
+            "/usr/bin",
+            "/usr/local/bin",
+            "/opt/homebrew/bin",
+            os.path.expanduser("~/.local/bin"),
+        ]
         for path in search_paths:
             if os.path.isdir(path):
                 try:
