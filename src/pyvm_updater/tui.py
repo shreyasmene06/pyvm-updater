@@ -35,6 +35,7 @@ from .installers import (
 from .utils import get_os_info
 from .version import check_python_version, get_active_python_releases, get_installed_python_versions
 from .wizard import WizardScreen
+from .config import get_config
 
 
 class StatusBar(Static):
@@ -150,6 +151,7 @@ class MainScreen(Screen):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("r", "refresh", "Refresh"),
+        Binding("t", "toggle_theme", "Toggle Theme"),
         Binding("u", "update_latest", "Update"),
         Binding("b", "rollback", "Rollback"),
         Binding("w", "start_wizard", "Wizard"),
@@ -300,7 +302,7 @@ class MainScreen(Screen):
 
             yield Static(
                 "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | "
-                "R: refresh | U: update | B: rollback | Q: quit[/dim]",
+                "R: refresh | U: update | B: rollback | T: theme | Q: quit[/dim]",
                 id="hint-bar",
             )
 
@@ -805,6 +807,34 @@ class MainScreen(Screen):
     def action_help(self) -> None:
         self.app.push_screen(HelpScreen())
 
+    def action_toggle_theme(self) -> None:
+        """Toggle the TUI theme between dark and light and persist setting."""
+        cfg = get_config()
+        current = cfg.tui_theme if cfg.tui_theme else "dark"
+        new = "light" if current == "dark" else "dark"
+        cfg.set("tui", "theme", new)
+        try:
+            cfg.save()
+        except Exception:
+            pass
+
+        # Try to apply theme if Textual provides an API; otherwise just refresh and show status
+        try:
+            if hasattr(self.app, "set_dark"):
+                # Newer Textual versions may expose set_dark
+                self.app.set_dark(new == "dark")
+            elif hasattr(self.app, "dark"):
+                setattr(self.app, "dark", new == "dark")
+            if hasattr(self.app, "refresh"):
+                self.app.refresh()
+        except Exception:
+            pass
+
+        try:
+            self.query_one("#status-bar").set_message(f"Theme set to {new}", "dim")
+        except Exception:
+            pass
+
 
 class SuccessScreen(Screen):
     """Screen shown after successful installation"""
@@ -929,14 +959,15 @@ class HelpScreen(Screen):
   Up/Down   Move in list
 
 [bold]Actions[/bold]
-  Enter     Install selected version
-  X         Remove selected version
-  R         Refresh data
-  U         Update to latest version
-  W         Install wizard
-  B         Rollback last action
-  ?         This help
-  Q         Quit
+    Enter     Install selected version
+    X         Remove selected version
+    R         Refresh data
+    U         Update to latest version
+    W         Install wizard
+    B         Rollback last action
+    T         Toggle theme
+    ?         This help
+    Q         Quit
 
 [bold]CLI Commands[/bold]
   pyvm list      List versions
