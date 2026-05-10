@@ -153,6 +153,7 @@ class MainScreen(Screen):
         Binding("u", "update_latest", "Update"),
         Binding("b", "rollback", "Rollback"),
         Binding("w", "start_wizard", "Wizard"),
+        Binding("t", "toggle_theme", "Theme"),
         Binding("1", "focus_installed", "Installed", show=False),
         Binding("2", "focus_available", "Available", show=False),
         Binding("?", "help", "Help"),
@@ -300,7 +301,7 @@ class MainScreen(Screen):
 
             yield Static(
                 "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | "
-                "R: refresh | U: update | B: rollback | Q: quit[/dim]",
+                "R: refresh | U: update | B: rollback | T: theme | Q: quit[/dim]",
                 id="hint-bar",
             )
 
@@ -805,6 +806,13 @@ class MainScreen(Screen):
     def action_help(self) -> None:
         self.app.push_screen(HelpScreen())
 
+    def action_toggle_theme(self) -> None:
+        """Toggle between light and dark themes."""
+        self.app.dark = not self.app.dark
+
+        theme_name = "dark" if self.app.dark else "light"
+        self.query_one("#status-bar", StatusBar).set_message(f"Switched to {theme_name} theme.", "green")
+
 
 class SuccessScreen(Screen):
     """Screen shown after successful installation"""
@@ -935,6 +943,7 @@ class HelpScreen(Screen):
   U         Update to latest version
   W         Install wizard
   B         Rollback last action
+  T         Toggle theme
   ?         This help
   Q         Quit
 
