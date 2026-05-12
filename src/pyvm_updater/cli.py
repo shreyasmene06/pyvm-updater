@@ -319,16 +319,38 @@ def list_versions(show_all: bool) -> None:
                     status_display = "bugfix"
                 elif "security" in status.lower():
                     status_display = "security"
-                elif "end of life" in status.lower():
+                elif "end-of-life" in status.lower():
                     status_display = "end-of-life"
                 else:
                     status_display = status
+                
+                color="white"
+                if "pre-release" in status.lower():
+                    color="cyan"
+                elif "bugfix" in status.lower():
+                    color="green"
+                elif "security" in status.lower():
+                    color="yellow"
+                elif "end-of-life" in status.lower():
+                    color="red"
 
-                click.echo(f"{series:<10} {latest:<12} {status_display:<15} {end_support}{marker}")
+                click.secho(
+    f"{series:<10} {latest:<12} {status_display:<15} {end_support}{marker}",
+    fg=color
+)
 
             click.echo(f"\n * = your installed version ({local_ver})")
             click.echo("\nUse 'pyvm list --all' to see all patch versions")
+        click.secho("● stable", fg="green", nl=False)
+        click.echo(" ", nl=False)
 
+        click.secho("● security", fg="yellow", nl=False)
+        click.echo(" ", nl=False)
+
+        click.secho("● end-of-life", fg="red", nl=False)
+        click.echo(" ", nl=False)
+
+        click.secho("● pre-release", fg="cyan")
         click.echo("Install with: pyvm install <version>")
 
     except KeyboardInterrupt:
