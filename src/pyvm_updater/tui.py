@@ -153,6 +153,7 @@ class MainScreen(Screen):
         Binding("u", "update_latest", "Update"),
         Binding("b", "rollback", "Rollback"),
         Binding("w", "start_wizard", "Wizard"),
+        Binding("t", "toggle_theme", "Theme"),
         Binding("1", "focus_installed", "Installed", show=False),
         Binding("2", "focus_available", "Available", show=False),
         Binding("?", "help", "Help"),
@@ -300,7 +301,7 @@ class MainScreen(Screen):
 
             yield Static(
                 "[dim]Tab: switch panels | Arrow keys: navigate | Enter: install | X: remove | "
-                "R: refresh | U: update | B: rollback | Q: quit[/dim]",
+                "R: refresh | U: update | B: rollback | T: theme | Q: quit[/dim]",
                 id="hint-bar",
             )
 
@@ -732,6 +733,12 @@ class MainScreen(Screen):
         version = last_action["version"]
         self.run_rollback_with_suspend(version)
 
+    def action_toggle_theme(self) -> None:
+        """Toggle between Textual's light and dark themes."""
+        self.app.dark = not self.app.dark
+        theme_name = "dark" if self.app.dark else "light"
+        self.query_one("#status-bar", StatusBar).set_message(f"Switched to {theme_name} theme", "green")
+
     def run_rollback_with_suspend(self, version: str) -> None:
         """Run rollback with TUI suspended"""
         import json
@@ -933,6 +940,7 @@ class HelpScreen(Screen):
   X         Remove selected version
   R         Refresh data
   U         Update to latest version
+  T         Toggle theme
   W         Install wizard
   B         Rollback last action
   ?         This help
