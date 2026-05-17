@@ -64,10 +64,27 @@ class TestInfoJson:
         data = json.loads(result.output)
         assert isinstance(data["os"], str)
         assert isinstance(data["admin"], bool)
+        assert isinstance(data["shell"], str)
+        assert isinstance(data["environment"], str)
+        assert isinstance(data["path_entries"], int)
 
 
 class TestListJson:
     """Tests for pyvm list --json."""
+
+    def test_list_json_output_is_valid(self, runner):
+        result = runner.invoke(cli, ["list", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "shell" in data
+        assert "environment" in data
+        assert "path_entries" in data
+        assert "os" in data
+        assert "architecture" in data
+        assert "python_version" in data
+        assert "python_path" in data
+        assert "platform" in data
+        assert "admin" in data
 
     @patch("pyvm_updater.cli.get_active_python_releases")
     def test_list_json_releases(self, mock_releases, runner):
@@ -108,3 +125,16 @@ class TestListJson:
         assert len(data["versions"]) == 2
         assert data["versions"][0]["version"] == "3.13.0"
         assert data["versions"][0]["latest"] is True
+
+@patch.dict("os.environ", {"SHELL": "/bin/bash"})
+def test_info_shell_detection(runner):
+    result = runner.invoke(cli, ["info", "--json"])
+    data = json.loads(result.output)
+
+    assert data["shell"] == "/bin/bash"
+@patch.dict("os.environ", {"PATH": "/usr/bin:/bin"})
+def test_info_path_entries(self, runner):
+    result = runner.invoke(cli, ["info", "--json"])
+    data = json.loads(result.output)
+
+    assert data["path_entries"] == 2
