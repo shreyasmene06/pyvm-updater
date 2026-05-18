@@ -84,3 +84,25 @@ class TestIsPythonVersionInstalled:
 
         # The current full version should definitely be installed
         assert is_python_version_installed(current_ver) is True
+class TestNormalizeStatus:
+    """Tests for _normalize_status function."""
+
+    def test_prerelease_exact_match(self):
+        """Test that pre-release is correctly identified."""
+        from pyvm_updater.version import _normalize_status
+        assert _normalize_status("pre-release") == "prerelease"
+
+    def test_deprecated_not_prerelease(self):
+        """Test that deprecated is not classified as prerelease."""
+        from pyvm_updater.version import _normalize_status
+        assert _normalize_status("deprecated") != "prerelease"
+
+    def test_prepared_not_prerelease(self):
+        """Test that prepared is not classified as prerelease."""
+        from pyvm_updater.version import _normalize_status
+        assert _normalize_status("prepared") != "prerelease"
+
+    def test_prerelease_no_hyphen(self):
+        """Test that prerelease without hyphen is correctly identified."""
+        from pyvm_updater.version import _normalize_status
+        assert _normalize_status("prerelease") == "prerelease"
