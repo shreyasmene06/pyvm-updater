@@ -212,6 +212,9 @@ jobs:
         if: |
           needs.type-check.result == 'failure' ||
           needs.lint-ruff.result == 'failure' ||
+          needs.lint-flake8.result == 'failure' ||
           needs.format-check.result == 'failure' ||
-          needs.security-scan.result == 'failure'
+          needs.security-scan.result == 'failure' ||
+          needs.dependency-check.result == 'failure' ||
+          needs.test.result == 'failure'
         run: exit 1
