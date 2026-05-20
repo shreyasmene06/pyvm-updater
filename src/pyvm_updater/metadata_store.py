@@ -180,14 +180,8 @@ def start_background_sync_if_stale() -> None:
         return
 
     def _run():
-        try:
-            _sync_lock.acquire()
+        with _sync_lock:
             sync_python_org()
-        finally:
-            try:
-                _sync_lock.release()
-            except Exception:
-                pass
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
