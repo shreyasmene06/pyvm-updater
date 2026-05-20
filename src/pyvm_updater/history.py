@@ -53,3 +53,18 @@ class HistoryManager:
         if not history:
             return None
         return history[-1]
+
+    @staticmethod
+    def pop_last_action() -> dict[Any, Any] | None:
+        """Remove and return the last history entry, persisting the change."""
+        history = HistoryManager.get_history()
+        if not history:
+            return None
+        entry = history.pop()
+        try:
+            HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(HISTORY_FILE, "w") as f:
+                json.dump(history, f, indent=2)
+        except Exception as e:
+            print(f"Warning: Could not update history: {e}")
+        return entry

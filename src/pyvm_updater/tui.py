@@ -23,7 +23,6 @@ except ImportError:
 
 # Import from new modular structure
 from .config import get_config
-from .constants import HISTORY_FILE
 from .history import HistoryManager
 from .installers import (
     remove_python_linux,
@@ -736,7 +735,6 @@ class MainScreen(Screen):
 
     def run_rollback_with_suspend(self, version: str) -> None:
         """Run rollback with TUI suspended"""
-        import json
 
         from textual.app import SuspendNotSupported
 
@@ -775,15 +773,7 @@ class MainScreen(Screen):
                         success = do_rollback()
                         if success:
                             print("\nRollback complete!")
-                            # Update history file
-                            history = HistoryManager.get_history()
-                            if history:
-                                history.pop()
-                                try:
-                                    with open(HISTORY_FILE, "w") as f:
-                                        json.dump(history, f, indent=2)
-                                except Exception:
-                                    pass
+                            HistoryManager.pop_last_action()
                         else:
                             print("\nRollback failed.")
                     else:

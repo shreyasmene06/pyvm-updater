@@ -17,7 +17,6 @@ from rich.console import Console
 
 from . import __version__
 from .config import get_config
-from .constants import HISTORY_FILE
 from .history import HistoryManager
 from .installers import (
     remove_python_linux,
@@ -105,14 +104,7 @@ def rollback(yes: bool) -> None:
 
         if success:
             click.echo(f"\nSuccessfully rolled back: Python {version} removed.")
-            history = HistoryManager.get_history()
-            if history:
-                history.pop()
-                try:
-                    with open(HISTORY_FILE, "w") as f:
-                        json.dump(history, f, indent=2)
-                except Exception:
-                    pass
+            HistoryManager.pop_last_action()
         else:
             click.echo("\nRollback encountered issues.")
             sys.exit(1)
