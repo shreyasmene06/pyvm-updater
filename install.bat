@@ -24,24 +24,10 @@ if %errorlevel% neq 0 (
     set PIP_CMD=pip
 )
 
-echo Installing required packages...
+echo Installing pyvm and dependencies...
 echo.
 
-REM Install the package
-%PIP_CMD% install requests beautifulsoup4 packaging click
-
-if %errorlevel% neq 0 (
-    echo.
-    echo Failed to install dependencies.
-    pause
-    exit /b 1
-)
-
-echo.
-echo Installing pyvm from current directory...
-echo.
-
-REM Install in editable mode
+REM Install in editable mode (handles all deps from pyproject.toml)
 %PIP_CMD% install -e .
 
 if %errorlevel% equ 0 (

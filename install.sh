@@ -24,23 +24,10 @@ else
     PIP_CMD="pip"
 fi
 
-echo "📦 Installing required packages..."
+echo "📦 Installing pyvm and dependencies..."
 echo ""
 
-# Install the package
-$PIP_CMD install requests beautifulsoup4 packaging click
-
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "❌ Failed to install dependencies."
-    exit 1
-fi
-
-echo ""
-echo "📥 Installing pyvm from current directory..."
-echo ""
-
-# Install in editable mode
+# Install in editable mode (handles all deps from pyproject.toml)
 $PIP_CMD install -e .
 
 if [ $? -eq 0 ]; then
