@@ -22,8 +22,7 @@ dependencies = [
     "packaging>=20.0",
     "click>=8.0.0",
     "textual>=0.40.0",
-    "rich>=13.0.0",     # Used for enhanced CLI progress bars
-   
+    "rich>=13.0.0",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
