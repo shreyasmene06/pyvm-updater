@@ -27,7 +27,7 @@ jobs:
           PAGE=1
           echo "[]" > final_list.json
           while true; do
-            RESPONSE=$(gh api "/repos/shreyasmene06/pyvm-updater/pulls?state=closed&per_page=100&page=${PAGE}")
+            RESPONSE=$(gh api "/repos/${{ github.repository }}/pulls?state=closed&per_page=100&page=${PAGE}")
             COUNT=$(echo "$RESPONSE" | jq '. | length')
             if [ "$COUNT" -eq 0 ]; then break; fi
             jq -s '.[0] + .[1]' final_list.json <(echo "$RESPONSE") > tmp.json && mv tmp.json final_list.json
