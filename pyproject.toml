@@ -57,6 +57,8 @@ dev = [
     "mypy>=0.900",
     "textual-dev>=1.0.0",
     "ruff>=0.0.280",
+    "bandit[toml]>=1.7",
+    "pip-audit>=0.0.1",
 ]
 
 [project.scripts]
