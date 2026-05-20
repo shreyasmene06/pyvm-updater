@@ -93,7 +93,7 @@ class Config:
             return default
 
     def set(self, section: str, key: str, value: Any) -> None:
-        """Set a configuration value (runtime only, not persisted).
+        """Set a configuration value. Call save() to persist to disk.
 
         Args:
             section: Config section.
