@@ -890,7 +890,7 @@ def doctor():
         tool = "pyenv" if pyenv_path else "mise"
         click.secho(f" [✓] Helper Tool: Found {tool} at {pyenv_path or mise_path}", fg="green")
     else:
-        click.secho(" [!] Helper Tool: Neither pyenv nor mise found. (Recommended for Linux/macOS)", fg="yellow")
+        click.secho(" [!] Helper Tool: Neither pyenv nor mise found. These tools are mainly recommended for Linux/macOS(optional for windows).", fg="yellow")
 
     # 2. Check Network Reachability
     try:
