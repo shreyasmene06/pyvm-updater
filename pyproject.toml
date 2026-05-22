@@ -188,7 +188,7 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
-fail_under = 0  # Set to higher value once you have tests
+fail_under = 50
 
 [tool.bandit]
 exclude_dirs = [".venv", "dist", ".git", "pyvm_updater.egg-info", "tests"]
