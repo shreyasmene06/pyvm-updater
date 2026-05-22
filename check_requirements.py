@@ -56,7 +56,7 @@ def check_internet() -> bool:
 def check_existing_dependencies() -> dict[str, bool]:
     """Check if required packages are already installed"""
     print("✓ Checking existing dependencies...")
-    packages: dict[str, bool] = {"requests": False, "beautifulsoup4": False, "packaging": False, "click": False}
+    packages: dict[str, bool] = {"requests": False, "beautifulsoup4": False, "packaging": False, "click": False, "rich": False, "textual": False}
 
     for package in packages:
         try:
