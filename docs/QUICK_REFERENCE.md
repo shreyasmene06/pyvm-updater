@@ -235,7 +235,7 @@ pyvm venv create myproject --python 3.12
 | File | Purpose |
 |------|---------|
 | `~/.config/pyvm/config.toml` | User configuration |
-| `~/.pyvm_history.json` | Installation history |
+| `~/.local/share/pyvm/history.json` | Installation history |
 | `~/.local/share/pyvm/venvs/` | Managed virtual environments |
 
 ## Troubleshooting
