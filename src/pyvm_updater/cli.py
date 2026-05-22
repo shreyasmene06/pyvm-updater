@@ -960,6 +960,10 @@ def use_version(version: str) -> None:
             click.echo(f"\nInstall it with: pyvm install {version}")
             sys.exit(1)
 
+        if not os.path.isfile(python_exe) or not os.access(python_exe, os.X_OK):
+            click.echo(f"Error: {python_exe} is not a valid executable.")
+            sys.exit(1)
+
         click.echo(f"Found Python {version} at: {python_exe}")
 
         # Prepare session

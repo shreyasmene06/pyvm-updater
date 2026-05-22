@@ -24,6 +24,8 @@ class TestCliUse:
             with (
                 patch("os.symlink"),
                 patch("os.makedirs"),
+                patch("os.path.isfile", return_value=True),
+                patch("os.access", return_value=True),
                 patch("tempfile.mkdtemp") as mock_mkdtemp,
                 patch("shutil.rmtree") as mock_rmtree,
                 patch("os.path.exists", return_value=False),
@@ -70,6 +72,8 @@ class TestCliUse:
             with (
                 patch("os.symlink", side_effect=OSError("Privilege error")),
                 patch("os.makedirs"),
+                patch("os.path.isfile", return_value=True),
+                patch("os.access", return_value=True),
                 patch("tempfile.mkdtemp", return_value="C:\\Temp\\session"),
                 patch("shutil.rmtree"),
                 patch("builtins.open", new_callable=MagicMock) as mock_open,
