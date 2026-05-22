@@ -472,12 +472,15 @@ class SourceInstaller(InstallerPlugin):
         if not shutil.which("curl") or not shutil.which("bash"):
             return False
 
-        pkg_mgr = "dnf" if shutil.which("dnf") else "yum"
-        if not shutil.which(pkg_mgr):
-            if shutil.which("apt"):
-                pkg_mgr = "apt"
-            else:
-                return False
+        pkg_mgr = None
+        if shutil.which("apt"):
+            pkg_mgr = "apt"
+        elif shutil.which("dnf"):
+            pkg_mgr = "dnf"
+        elif shutil.which("yum"):
+            pkg_mgr = "yum"
+        else:
+            return False
 
         deps = []
         if pkg_mgr in ["dnf", "yum"]:
