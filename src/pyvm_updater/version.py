@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 from packaging import version as pkg_version
 
 from .constants import MAX_RETRIES, REQUEST_TIMEOUT, RETRY_DELAY
+from .logging_config import get_logger
 from .metadata_store import (
     get_releases_from_cache,
     get_versions_from_cache,
@@ -22,6 +23,8 @@ from .metadata_store import (
     sync_python_org,
 )
 from .utils import get_os_info, validate_version_string
+
+log = get_logger("version")
 
 
 def get_installed_python_versions() -> list[dict[str, Any]]:
@@ -198,10 +201,10 @@ def get_latest_python_info_with_retry() -> tuple[str | None, str | None]:
                 time.sleep(RETRY_DELAY * (attempt + 1))
         except Exception as e:
             if attempt < MAX_RETRIES - 1:
-                print(f"Attempt {attempt + 1} failed, retrying...")
+                log.warning(f"Attempt {attempt + 1} failed, retrying...")
                 time.sleep(RETRY_DELAY * (attempt + 1))
             else:
-                print(f"All retry attempts failed: {e}")
+                log.error(f"All retry attempts failed: {e}")
     return None, None
 
 
@@ -216,14 +219,14 @@ def get_latest_python_info() -> tuple[str | None, str | None]:
 
         download_button = soup.find("a", class_="button")
         if not download_button:
-            print("Error: Could not find download button on Python.org")
+            log.error("Could not find download button on Python.org")
             return None, None
 
         latest_ver_string = download_button.get_text(strip=True)
         latest_ver = latest_ver_string.split()[-1]
 
         if not validate_version_string(latest_ver):
-            print(f"Error: Invalid version format retrieved: {latest_ver}")
+            log.error(f"Invalid version format retrieved: {latest_ver}")
             return None, None
 
         download_url_raw = download_button.get("href")
@@ -237,13 +240,13 @@ def get_latest_python_info() -> tuple[str | None, str | None]:
         return latest_ver, download_url
 
     except requests.Timeout:
-        print("Error: Request to python.org timed out.")
+        log.error("Request to python.org timed out.")
         return None, None
     except requests.RequestException as e:
-        print(f"Error: Network request failed: {e}")
+        log.error(f"Network request failed: {e}")
         return None, None
     except Exception as e:
-        print(f"Error: Unexpected error: {e}")
+        log.error(f"Unexpected error: {e}")
         return None, None
 
 
@@ -362,19 +365,19 @@ def check_python_version(silent: bool = False) -> tuple[str, str | None, bool]:
     local_ver = platform.python_version()
 
     if not silent:
-        print(f"Checking Python version... (Current: {local_ver})")
+        log.info(f"Checking Python version... (Current: {local_ver})")
 
     latest_ver, _ = get_latest_python_info_with_retry()
 
     if not latest_ver:
         if not silent:
-            print("Error: Could not fetch latest version information.")
+            log.error("Could not fetch latest version information.")
         return local_ver, None, False
 
     try:
         if not validate_version_string(latest_ver):
             if not silent:
-                print(f"Error: Invalid version format from server: {latest_ver}")
+                log.error(f"Invalid version format from server: {latest_ver}")
             return local_ver, None, False
 
         local_version_obj = pkg_version.parse(local_ver)
@@ -398,7 +401,7 @@ def check_python_version(silent: bool = False) -> tuple[str, str | None, bool]:
 
     except Exception as e:
         if not silent:
-            print(f"Error comparing versions: {e}")
+            log.error(f"Error comparing versions: {e}")
         return local_ver, latest_ver, False
 
 
