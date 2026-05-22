@@ -6,7 +6,6 @@ A clean terminal user interface for managing Python versions
 
 import asyncio
 import platform
-import sys
 from typing import Any, Optional
 
 try:
@@ -17,9 +16,23 @@ try:
     from textual.screen import Screen
     from textual.widgets import Button, Footer, Header, Label, ListItem, ListView, LoadingIndicator, Static
 except ImportError:
-    print("ERROR: TUI mode requires the 'textual' package.")
-    print("Install it with: pip install textual")
-    sys.exit(1)
+
+    class _TuiUnavailable:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError(
+                "TUI mode requires the 'textual' package. "
+                "Install it with: pip install textual"
+            )
+
+    App = ComposeResult = Binding = Container = Horizontal = Vertical = Screen = _TuiUnavailable
+    Button = Footer = Header = Label = ListItem = ListView = LoadingIndicator = Static = _TuiUnavailable
+
+    def _noop_decorator(*a, **k):
+        def _wrapper(f):
+            return f
+        return _wrapper
+
+    work = _noop_decorator
 
 # Import from new modular structure
 from .config import get_config
