@@ -140,7 +140,7 @@ indent-style = "space"
 # Respect magic trailing commas
 skip-magic-trailing-comma = false
 # Format docstrings
-docstring-code-format = true
+docstring-code-format = false
 
 [tool.mypy]
 python_version = "3.9"
