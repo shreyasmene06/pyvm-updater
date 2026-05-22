@@ -530,25 +530,26 @@ class CondaInstaller(InstallerPlugin):
     def get_name(self) -> str:
         return "conda"
 
+    def _windows_conda_paths(self) -> list[Path]:
+        user_profile = os.environ.get("USERPROFILE", "")
+        local_appdata = os.environ.get("LOCALAPPDATA", "")
+        return [
+            Path(user_profile) / "miniconda3" / "Scripts" / "conda.exe",
+            Path(user_profile) / "anaconda3" / "Scripts" / "conda.exe",
+            Path("C:/ProgramData/miniconda3/Scripts/conda.exe"),
+            Path("C:/ProgramData/anaconda3/Scripts/conda.exe"),
+            Path("D:/miniconda3/Scripts/conda.exe"),
+            Path("D:/anaconda3/Scripts/conda.exe"),
+            Path(local_appdata) / "miniconda3" / "Scripts" / "conda.exe",
+            Path(local_appdata) / "anaconda3" / "Scripts" / "conda.exe",
+        ]
+
     def is_supported(self) -> bool:
         if shutil.which("conda") or shutil.which("mamba"):
             return True
 
-        # On Windows, check common paths
         if platform.system() == "Windows":
-            user_profile = os.environ.get("USERPROFILE", "")
-            local_appdata = os.environ.get("LOCALAPPDATA", "")
-            common_paths = [
-                Path(user_profile) / "miniconda3" / "Scripts" / "conda.exe",
-                Path(user_profile) / "anaconda3" / "Scripts" / "conda.exe",
-                Path("C:/ProgramData/miniconda3/Scripts/conda.exe"),
-                Path("C:/ProgramData/anaconda3/Scripts/conda.exe"),
-                Path("D:/miniconda3/Scripts/conda.exe"),
-                Path("D:/anaconda3/Scripts/conda.exe"),
-                Path(local_appdata) / "miniconda3" / "Scripts" / "conda.exe",
-                Path(local_appdata) / "anaconda3" / "Scripts" / "conda.exe",
-            ]
-            for path in common_paths:
+            for path in self._windows_conda_paths():
                 if path.exists():
                     return True
         return False
@@ -561,19 +562,7 @@ class CondaInstaller(InstallerPlugin):
             return "conda"
 
         if platform.system() == "Windows":
-            user_profile = os.environ.get("USERPROFILE", "")
-            local_appdata = os.environ.get("LOCALAPPDATA", "")
-            common_paths = [
-                Path(user_profile) / "miniconda3" / "Scripts" / "conda.exe",
-                Path(user_profile) / "anaconda3" / "Scripts" / "conda.exe",
-                Path("C:/ProgramData/miniconda3/Scripts/conda.exe"),
-                Path("C:/ProgramData/anaconda3/Scripts/conda.exe"),
-                Path("D:/miniconda3/Scripts/conda.exe"),
-                Path("D:/anaconda3/Scripts/conda.exe"),
-                Path(local_appdata) / "miniconda3" / "Scripts" / "conda.exe",
-                Path(local_appdata) / "anaconda3" / "Scripts" / "conda.exe",
-            ]
-            for path in common_paths:
+            for path in self._windows_conda_paths():
                 if path.exists():
                     return str(path)
         return "conda"
