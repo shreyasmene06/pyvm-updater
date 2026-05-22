@@ -188,10 +188,18 @@ def install(
         pyvm install 3.11.5 --yes
         pyvm install 3.12.1 --installer pyenv
     """
+    
+    
 
     if dry_run:
         click.secho(f"[DRY-RUN] Would download and install Python {version}", fg="yellow")
         return
+    if build_from_source and platform.system() == "Windows":
+          click.secho(
+                       "The --build-from-source option is only supported on Linux.",
+        fg="red"
+    )
+    raise click.Abort()
 
     try:
         if not validate_version_string(version) or len(version.split(".")) < 3:

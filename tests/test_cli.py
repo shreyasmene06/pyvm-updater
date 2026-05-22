@@ -23,3 +23,13 @@ def test_remove_dry_run(runner):
     assert result.exit_code == 0
     assert "[DRY-RUN]" in result.output
     assert "Would remove Python 3.12.1" in result.output
+
+    
+def test_build_from_source_windows(runner):
+    result = runner.invoke(
+        cli,
+        ["install", "3.12.1", "--build-from-source"]
+    )
+
+    assert result.exit_code != 0
+    assert "only supported on Linux" in result.output
