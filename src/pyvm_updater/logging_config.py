@@ -34,7 +34,7 @@ def setup_logging(verbose: bool = False, quiet: bool = False) -> logging.Logger:
     logger.handlers.clear()
 
     # Create console handler with formatting
-    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(level)
 
     # Simple format for CLI output
