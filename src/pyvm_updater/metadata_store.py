@@ -123,45 +123,51 @@ def sync_python_org() -> None:
                                 series = f"{parts[0]}.{parts[1]}"
                                 series_versions.setdefault(series, ver)
             with _connect() as conn:
-                for rel in releases:
-                    lv = series_versions.get(rel["series"])
+                conn.execute("BEGIN")
+                try:
+                    for rel in releases:
+                        lv = series_versions.get(rel["series"])
+                        conn.execute(
+                            "INSERT OR REPLACE INTO series(series, status, first_release, end_of_support, latest_version, source, fetched_at) VALUES(?,?,?,?,?,?,?)",
+                            (
+                                rel["series"],
+                                rel["status"],
+                                rel["first_release"],
+                                rel["end_of_support"],
+                                lv,
+                                "python.org",
+                                _now(),
+                            ),
+                        )
                     conn.execute(
-                        "INSERT OR REPLACE INTO series(series, status, first_release, end_of_support, latest_version, source, fetched_at) VALUES(?,?,?,?,?,?,?)",
-                        (
-                            rel["series"],
-                            rel["status"],
-                            rel["first_release"],
-                            rel["end_of_support"],
-                            lv,
-                            "python.org",
-                            _now(),
-                        ),
+                        "INSERT OR REPLACE INTO meta(key, value) VALUES('last_sync', ?)",
+                        (str(_now()),),
                     )
-                conn.execute(
-                    "INSERT OR REPLACE INTO meta(key, value) VALUES('last_sync', ?)",
-                    (str(_now()),),
-                )
-                release_links = soup.find_all("span", class_="release-number")
-                for release in release_links[:200]:
-                    link = release.find("a")
-                    if link:
-                        vt = link.get_text(strip=True)
-                        if vt.startswith("Python "):
-                            ver = vt.replace("Python ", "")
-                            if validate_version_string(ver):
-                                href_val = link.get("href")
-                                if isinstance(href_val, str):
-                                    full = (
-                                        f"https://www.python.org{href_val}"
-                                        if not href_val.startswith("http")
-                                        else href_val
+                    release_links = soup.find_all("span", class_="release-number")
+                    for release in release_links[:200]:
+                        link = release.find("a")
+                        if link:
+                            vt = link.get_text(strip=True)
+                            if vt.startswith("Python "):
+                                ver = vt.replace("Python ", "")
+                                if validate_version_string(ver):
+                                    href_val = link.get("href")
+                                    if isinstance(href_val, str):
+                                        full = (
+                                            f"https://www.python.org{href_val}"
+                                            if not href_val.startswith("http")
+                                            else href_val
+                                        )
+                                    else:
+                                        full = ""
+                                    conn.execute(
+                                        "INSERT OR REPLACE INTO versions(version, url, source, fetched_at) VALUES(?,?,?,?)",
+                                        (ver, full, "python.org", _now()),
                                     )
-                                else:
-                                    full = ""
-                                conn.execute(
-                                    "INSERT OR REPLACE INTO versions(version, url, source, fetched_at) VALUES(?,?,?,?)",
-                                    (ver, full, "python.org", _now()),
-                                )
+                    conn.execute("COMMIT")
+                except Exception:
+                    conn.execute("ROLLBACK")
+                    raise
             return
         except Exception:
             if attempt < MAX_RETRIES - 1:
