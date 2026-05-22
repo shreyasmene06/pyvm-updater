@@ -178,8 +178,6 @@ jobs:
           pip install .
       
       - name: Run tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           python -c "import sys; print('Python path:', sys.path)"
           python -c "import pyvm_updater; print('Version:', pyvm_updater.__version__)"
