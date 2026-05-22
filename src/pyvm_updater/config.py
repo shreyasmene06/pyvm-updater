@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .logging_config import get_logger
 from .paths import get_config_dir
 from .paths import get_config_file as _get_config_file
+
+log = get_logger("config")
 
 # Try to import tomllib (Python 3.11+) or fallback to tomli
 try:
@@ -148,7 +151,6 @@ class Config:
         try:
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
-            # Format config as TOML manually (avoid dependency)
             lines = []
             for section, values in self._config.items():
                 lines.append(f"[{section}]")
@@ -157,8 +159,28 @@ class Config:
                         lines.append(f"{key} = {str(value).lower()}")
                     elif isinstance(value, str):
                         lines.append(f'{key} = "{value}"')
-                    else:
+                    elif isinstance(value, (int, float)):
                         lines.append(f"{key} = {value}")
+                    elif isinstance(value, list):
+                        items = ", ".join(
+                            f'"{v}"' if isinstance(v, str) else str(v)
+                            for v in value
+                        )
+                        lines.append(f"{key} = [{items}]")
+                    elif isinstance(value, dict):
+                        log.warning(
+                            f"skipping nested dict [{section}].{key} — "
+                            "config.save() does not support nested tables"
+                        )
+                        continue
+                    elif value is None:
+                        continue
+                    else:
+                        log.warning(
+                            f"skipping [{section}].{key} — "
+                            f"unsupported type {type(value).__name__}"
+                        )
+                        continue
                 lines.append("")
 
             with open(CONFIG_FILE, "w") as f:
