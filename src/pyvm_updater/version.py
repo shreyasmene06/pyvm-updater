@@ -21,7 +21,7 @@ from .metadata_store import (
     start_background_sync_if_stale,
     sync_python_org,
 )
-from .utils import get_os_info, validate_version_string
+from .utils import get_os_info, normalize_release_status, validate_version_string
 
 
 def get_installed_python_versions() -> list[dict[str, Any]]:
@@ -421,16 +421,7 @@ def is_python_version_installed(version_str: str) -> bool:
 
 
 def _normalize_status(text: str) -> str:
-    t = text.lower()
-    if "pre-release" in t or "pre" in t:
-        return "prerelease"
-    if "bugfix" in t or "active" in t:
-        return "active"
-    if "security" in t:
-        return "security"
-    if "end of life" in t or "eol" in t:
-        return "eol"
-    return t
+    return normalize_release_status(text)
 
 
 def is_version_security_supported(ver: str) -> bool:

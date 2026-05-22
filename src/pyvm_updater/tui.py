@@ -33,7 +33,7 @@ from .installers import (
     update_python_macos,
     update_python_windows,
 )
-from .utils import get_os_info
+from .utils import get_os_info, normalize_release_status
 from .version import check_python_version, get_active_python_releases, get_installed_python_versions
 from .wizard import WizardScreen
 
@@ -475,14 +475,8 @@ class MainScreen(Screen):
             version = rel.get("latest_version", "")
             status = rel.get("status", "")
 
-            # Shorten status
-            if "pre-release" in status.lower():
-                status = "prerelease"
-            elif "bugfix" in status.lower():
-                status = "active"
-            elif "security" in status.lower():
-                status = "security"
-            elif "end of life" in status.lower():
+            status = normalize_release_status(status)
+            if status == "eol":
                 status = "EOL"
 
             if version:

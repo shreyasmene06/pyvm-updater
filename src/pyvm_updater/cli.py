@@ -30,7 +30,7 @@ from .installers import (
 )
 from .logging_config import get_logger, setup_logging
 from .paths import ensure_directories, migrate_legacy_paths
-from .utils import get_os_info, is_admin, validate_version_string
+from .utils import get_os_info, is_admin, normalize_release_status, validate_version_string
 from .version import (
     check_python_version,
     get_active_python_releases,
@@ -299,14 +299,14 @@ def remove(version: str, dry_run: bool, yes: bool) -> None:
 
 def _status_color(status: str) -> str:
     """Map a release status string to a terminal color."""
-    s = status.lower()
-    if "pre-release" in s or "pre" in s:
+    normalized = normalize_release_status(status)
+    if normalized == "prerelease":
         return "cyan"
-    if "bugfix" in s or "active" in s:
+    if normalized == "active":
         return "green"
-    if "security" in s:
+    if normalized == "security":
         return "yellow"
-    if "end of life" in s or "end-of-life" in s or "eol" in s:
+    if normalized == "eol":
         return "red"
     return "white"
 

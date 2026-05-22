@@ -188,3 +188,17 @@ def download_file(url: str, destination: str, max_retries: int = MAX_RETRIES) ->
                 return False
 
     return False
+
+
+def normalize_release_status(text: str) -> str:
+    """Normalize a release status string to a canonical form."""
+    t = text.lower()
+    if "pre-release" in t or "pre" in t:
+        return "prerelease"
+    if "bugfix" in t or "active" in t:
+        return "active"
+    if "security" in t:
+        return "security"
+    if "end of life" in t or "end-of-life" in t or "eol" in t:
+        return "eol"
+    return t
