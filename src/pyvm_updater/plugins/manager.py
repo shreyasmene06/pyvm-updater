@@ -25,12 +25,14 @@ class PluginManager:
 
     _instance: PluginManager | None = None
     _plugins: dict[str, InstallerPlugin] = {}
+    _skip_custom: bool = False
 
     def __new__(cls) -> PluginManager:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._register_builtins()
-            cls._instance._load_custom_plugins()
+            if not cls._skip_custom:
+                cls._instance._load_custom_plugins()
         return cls._instance
 
     def _register_builtins(self) -> None:

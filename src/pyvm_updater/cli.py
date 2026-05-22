@@ -47,7 +47,8 @@ log = get_logger("cli")
 @click.option("--version", "-v", is_flag=True, help="Show tool version")
 @click.option("--verbose", "-V", is_flag=True, help="Enable verbose output")
 @click.option("--quiet", "-q", is_flag=True, help="Suppress non-essential output")
-def cli(ctx: click.Context, version: bool, verbose: bool, quiet: bool) -> None:
+@click.option("--no-plugins", is_flag=True, help="Disable custom plugin loading")
+def cli(ctx: click.Context, version: bool, verbose: bool, quiet: bool, no_plugins: bool) -> None:
     """Python Version Manager - Check and install Python (does NOT modify system defaults)"""
     # Initialize logging
     setup_logging(verbose=verbose, quiet=quiet)
@@ -60,6 +61,10 @@ def cli(ctx: click.Context, version: bool, verbose: bool, quiet: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["config"] = get_config()
     ctx.obj["verbose"] = verbose
+
+    if no_plugins:
+        from .plugins.manager import PluginManager
+        PluginManager._skip_custom = True
 
     if version:
         click.echo(f"Python Version Manager v{__version__}")
