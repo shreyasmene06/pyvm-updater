@@ -51,6 +51,7 @@ Repository = "https://github.com/shreyasmene06/pyvm-updater"
 [project.optional-dependencies]
 dev = [
     "pytest>=6.0",
+    "pytest-mock>=3.0",
     "pytest-cov>=2.0",
     "black>=21.0",
     "flake8>=3.9",
