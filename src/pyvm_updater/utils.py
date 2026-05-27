@@ -82,7 +82,7 @@ def fetch_remote_sha256(checksum_url: str) -> str | None:
             candidate = parts[0].lower()
             if _SHA256_RE.match(candidate):
                 return candidate
-        
+
         click.echo("❌ Remote checksum payload is malformed or not a SHA-256 hash.")
         return None
     except requests.RequestException as e:

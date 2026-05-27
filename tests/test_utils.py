@@ -10,7 +10,6 @@ from pyvm_updater.utils import (
 )
 
 
-
 class TestValidateVersionString:
     """Tests for validate_version_string function."""
 
@@ -53,7 +52,6 @@ class TestValidateVersionString:
         assert validate_version_string("3.11_5") is False
 
 
-
 class TestGetOsInfo:
     """Tests for get_os_info function."""
 
@@ -72,7 +70,6 @@ class TestGetOsInfo:
         """Test that architecture is normalized to amd64, arm64, or x86."""
         _, arch = get_os_info()
         assert arch in ["amd64", "arm64", "x86"]
-
 
 
 class TestFetchRemoteSha256:
@@ -111,12 +108,12 @@ class TestFetchRemoteSha256:
         mock_response = mocker.MagicMock()
         mock_response.raise_for_status.return_value = None
         # Simulating a payload that isn't a valid SHA-256 hash
-        mock_response.text = "invalid_hash_string_that_is_too_short" 
+        mock_response.text = "invalid_hash_string_that_is_too_short"
         mocker.patch("pyvm_updater.utils.requests.get", return_value=mock_response)
 
         result = fetch_remote_sha256("https://example.com/checksum.txt")
         assert result is None
-    
+
     def test_valid_response_returns_hash(self, mocker):
         """A well-formed checksum file returns only the hash token."""
         fake_hash = "a" * 64
@@ -127,7 +124,6 @@ class TestFetchRemoteSha256:
 
         result = fetch_remote_sha256("https://example.com/checksum.txt")
         assert result == fake_hash
-
 
 
 class TestVerifyFileChecksum:
