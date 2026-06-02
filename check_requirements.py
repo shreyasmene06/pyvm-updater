@@ -13,12 +13,12 @@ def check_python_version() -> bool:
     """Check if Python version meets minimum requirements"""
     print("✓ Checking Python version...")
     version = sys.version_info
-    if version.major >= 3 and version.minor >= 7:
-        print(f"  ✓ Python {version.major}.{version.minor}.{version.micro} (minimum 3.7 required)")
+    if version.major >= 3 and version.minor >= 9:
+        print(f"  ✓ Python {version.major}.{version.minor}.{version.micro} (minimum 3.9 required)")
         return True
     else:
         print(f"  ✗ Python {version.major}.{version.minor}.{version.micro} is too old!")
-        print("    Please upgrade to Python 3.7 or higher")
+        print("    Please upgrade to Python 3.9 or higher")
         return False
 
 

@@ -35,19 +35,40 @@ def update_python_macos(version_str: str, preferred: str = "auto", **kwargs: Any
 def _install_with_plugins(version_str: str, preferred: str = "auto", **kwargs: Any) -> bool:
     """Generic installation logic using the plugin system."""
     pm = get_plugin_manager()
-    installer = pm.get_best_installer(preferred=preferred)
 
-    if not installer:
+    installers_to_try = []
+
+    if preferred != "auto":
+        requested_installer = pm.get_plugin(preferred)
+        if requested_installer and requested_installer.is_supported():
+            # If explicitly requested and supported, only try that one
+            installers_to_try = [requested_installer]
+        else:
+            # If requested is not supported, warn and fall back to all supported
+            best = pm.get_best_installer()
+            if best:
+                click.echo(
+                    f"⚠️  Requested installer '{preferred}' is not supported or not found. "
+                    f"Falling back to '{best.get_name()}'."
+                )
+                installers_to_try = pm.get_supported_plugins()
+    else:
+        # Auto mode: try all supported in priority order
+        installers_to_try = pm.get_supported_plugins()
+
+    if not installers_to_try:
         click.echo("❌ No supported installer found for your system.")
         return False
 
-    if preferred != "auto" and installer.get_name() != preferred:
-        click.echo(
-            f"⚠️  Requested installer '{preferred}' is not supported or not found. "
-            f"Falling back to '{installer.get_name()}'."
-        )
+    for idx, installer in enumerate(installers_to_try):
+        if installer.install(version_str, **kwargs):
+            return True
 
-    return installer.install(version_str, **kwargs)
+        if idx < len(installers_to_try) - 1:
+            click.echo(f"⚠️  Installer '{installer.get_name()}' failed. Falling back to next available mechanism...")
+
+    click.echo("❌ All available installation methods failed.")
+    return False
 
 
 def remove_python_windows(version_str: str) -> bool:

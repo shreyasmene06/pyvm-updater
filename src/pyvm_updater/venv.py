@@ -500,3 +500,25 @@ def get_venv_activate_command(name: str) -> str | None:
             return f"source {activate_script}"
 
     return None
+
+
+def get_venv_path(name: str) -> str | None:
+    """Get the path of a virtual environment.
+
+    Args:
+        name: Name of the venv.
+
+    Returns:
+        Path string, or None if venv not found.
+    """
+    registry = get_venv_registry()
+
+    if name in registry:
+        venv_path = Path(registry[name].get("path", ""))
+    else:
+        venv_path = get_venv_dir() / name
+
+    if not venv_path.exists():
+        return None
+
+    return str(venv_path)
