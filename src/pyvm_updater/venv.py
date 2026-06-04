@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,39 @@ VENV_REGISTRY = get_venv_registry_file()
 def get_venv_dir() -> Path:
     """Get the directory where venvs are stored."""
     return DEFAULT_VENV_DIR
+
+def _validate_venv_name(name: str) -> tuple[bool, str]:
+    """Validate a venv name before using it in path construction.
+
+    Rejects names that could escape the managed venv directory via
+    path traversal (e.g. '../outside') or contain illegal characters.
+
+    Args:
+        name: The venv name to validate.
+
+    Returns:
+        Tuple of (is_valid, error_message). error_message is empty if valid.
+    """
+    if not name or not name.strip():
+        return False, "Venv name cannot be empty."
+    if len(name) > 128:
+        return False, "Venv name must be 128 characters or fewer."
+    # Block path separators (both Unix and Windows)
+    if "/" in name or "\\" in name:
+        return False, f"Invalid venv name '{name}'. Name must not contain path separators (/ or \\)."
+    # Block null bytes
+    if "\x00" in name:
+        return False, f"Invalid venv name '{name}'. Name must not contain null bytes."
+    # Block traversal components
+    if name in (".", ".."):
+        return False, f"Invalid venv name '{name}'. Name cannot be '.' or '..'."
+    # Only allow safe characters: letters, digits, hyphens, underscores, dots
+    if not re.match(r"^[a-zA-Z0-9._-]+$", name):
+        return False, (
+            f"Invalid venv name '{name}'. "
+            "Name may only contain letters, numbers, hyphens (-), underscores (_), and dots (.)."
+        )
+    return True, ""
 
 
 def get_venv_registry() -> dict[str, Any]:
@@ -117,6 +151,10 @@ def create_venv(
     system_site_packages: bool = False,
     requirements_file: Path | None = None,
 ) -> tuple[bool, str]:
+    valid, err = _validate_venv_name(name)
+    if not valid:
+        return False, err
+
     """Create a new virtual environment.
 
     Args:
@@ -263,6 +301,9 @@ def list_venvs() -> list[dict[str, Any]]:
 
 
 def remove_venv(name: str, force: bool = False) -> tuple[bool, str]:
+    valid, err = _validate_venv_name(name)
+    if not valid:
+        return False, err
     """Remove a virtual environment.
 
     Args:
@@ -348,8 +389,14 @@ def _fix_venv_paths(venv_path: Path, old_path: Path) -> None:
 
 
 def rename_venv(old_name: str, new_name: str) -> tuple[bool, str]:
+    valid, err = _validate_venv_name(old_name)
+    if not valid:
+        return False, err
+    valid, err = _validate_venv_name(new_name)
+    if not valid:
+        return False, err
     """Rename a virtual environment on disk and in the registry.
-
+    
     Args:
         old_name: Current name of the venv.
         new_name: Desired new name for the venv.
@@ -413,6 +460,12 @@ def rename_venv(old_name: str, new_name: str) -> tuple[bool, str]:
 
 
 def duplicate_venv(source_name: str, new_name: str) -> tuple[bool, str]:
+    valid, err = _validate_venv_name(source_name)
+    if not valid:
+        return False, err
+    valid, err = _validate_venv_name(new_name)
+    if not valid:
+        return False, err
     """Duplicate a virtual environment by copying it to a new name.
 
     Copies the venv folder on disk, fixes internal paths, and registers

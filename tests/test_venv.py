@@ -157,3 +157,115 @@ class TestGetVenvActivateCommand:
 
         assert result is not None
         assert "activate" in result
+
+class TestValidateVenvName:
+    """Tests for _validate_venv_name input validation."""
+
+    # --- valid names (should pass) ---
+
+    def test_valid_simple_name(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("myproject")
+        assert valid is True
+        assert err == ""
+
+    def test_valid_name_with_hyphens_and_underscores(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("my-project_v2")
+        assert valid is True
+
+    def test_valid_name_with_dots(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("env.3.12")
+        assert valid is True
+
+    # --- path traversal (should fail) ---
+
+    def test_rejects_dotdot_slash(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("../escape")
+        assert valid is False
+        assert "path separators" in err
+
+    def test_rejects_deep_traversal(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("../../etc")
+        assert valid is False
+
+    def test_rejects_dotdot_alone(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("..")
+        assert valid is False
+        assert "'.'" in err or "'..'" in err
+
+    def test_rejects_dot_alone(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name(".")
+        assert valid is False
+
+    def test_rejects_absolute_unix_path(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("/absolute/path")
+        assert valid is False
+
+    def test_rejects_windows_backslash(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("..\\escape")
+        assert valid is False
+
+    # --- empty / too long ---
+
+    def test_rejects_empty_string(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("")
+        assert valid is False
+        assert "empty" in err
+
+    def test_rejects_whitespace_only(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("   ")
+        assert valid is False
+
+    def test_rejects_name_over_128_chars(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("a" * 129)
+        assert valid is False
+        assert "128" in err
+
+    # --- special characters ---
+
+    def test_rejects_semicolon(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("name; rm -rf")
+        assert valid is False
+
+    def test_rejects_null_byte(self):
+        from pyvm_updater.venv import _validate_venv_name
+        valid, err = _validate_venv_name("name\x00evil")
+        assert valid is False
+        assert "null" in err
+
+    # --- integration: create_venv rejects bad name ---
+
+    def test_create_venv_rejects_traversal_name(self):
+        success, message = create_venv("../outside")
+        assert success is False
+        assert "Invalid" in message or "path separators" in message
+
+    def test_remove_venv_rejects_traversal_name(self):
+        from pyvm_updater.venv import remove_venv
+        success, message = remove_venv("../outside")
+        assert success is False
+        assert "Invalid" in message
+
+    def test_rename_venv_rejects_traversal_new_name(self):
+        from pyvm_updater.venv import rename_venv
+        success, message = rename_venv("myenv", "../outside")
+        assert success is False
+        assert "Invalid" in message
+
+    def test_duplicate_venv_rejects_traversal_new_name(self):
+        from pyvm_updater.venv import duplicate_venv
+        success, message = duplicate_venv("myenv", "../outside")
+        assert success is False
+        assert "Invalid" in message
