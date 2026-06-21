@@ -45,8 +45,6 @@ where = ["src"]
 [tool.setuptools.package-dir]
 "" = "src"
 
-[project.urls]
-Repository = "https://github.com/shreyasmene06/pyvm-updater"
 
 [project.optional-dependencies]
 dev = [
@@ -193,3 +191,8 @@ fail_under = 0  # Set to higher value once you have tests
 [tool.bandit]
 exclude_dirs = [".venv", "dist", ".git", "pyvm_updater.egg-info", "tests"]
 skips = ["B101"]  # Skip assert warnings in tests
+
+[project.urls]
+Repository = "https://github.com/shreyasmene06/pyvm-updater"
+Documentation = "https://github.com/shreyasmene06/pyvm-updater/tree/main/docs"
+Issues = "https://github.com/shreyasmene06/pyvm-updater/issues"

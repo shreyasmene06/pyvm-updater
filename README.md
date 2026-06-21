@@ -6,7 +6,7 @@ A cross-platform CLI tool with an interactive TUI to check and install Python ve
 
 pyvm provides a safe and convenient way to manage multiple Python versions on your system. It installs new versions alongside your existing Python without modifying system defaults, ensuring your system tools remain functional.
 
-**Documentation**: [Installation Guide](docs/INSTALL.md) | [Quick Start](docs/QUICKSTART.md) | [Quick Reference](docs/QUICK_REFERENCE.md)
+**Documentation**: [Installation Guide](https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/INSTALL.md) | [Quick Start](https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICKSTART.md) | [Quick Reference](https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICK_REFERENCE.md)
 
 ## Features
 
@@ -398,11 +398,11 @@ mypy src/pyvm_updater
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome. See [CONTRIBUTING.md](https://github.com/shreyasmene06/pyvm-updater/blob/main/CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](https://github.com/shreyasmene06/pyvm-updater/blob/main/LICENSE) for details.
 
 ## Author
 
