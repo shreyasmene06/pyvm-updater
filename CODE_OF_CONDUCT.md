@@ -63,6 +63,11 @@ Project maintainers may take actions including:
 * Removal of violating content
 * Temporary or permanent bans from project spaces
 
+## Enforcement
+
+Instances of unacceptable behavior may be reported to the project maintainers through GitHub Issues or Discussions.
+
+All reports will be reviewed and handled respectfully and confidentially.
 depending on the severity and frequency of violations.
 
 ## Attribution
