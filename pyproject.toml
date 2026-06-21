@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyvm-updater"
-version = "2.2.0"
+version = "2.2.1"
 description = "Cross-platform Python version checker and installer (does NOT modify system defaults)"
 readme = "README.md"
 license = "MIT"
@@ -51,9 +51,9 @@ Repository = "https://github.com/shreyasmene06/pyvm-updater"
 Documentation = "https://github.com/shreyasmene06/pyvm-updater/tree/main/docs"
 Issues = "https://github.com/shreyasmene06/pyvm-updater/issues"
 License = "https://github.com/shreyasmene06/pyvm-updater/blob/main/LICENSE"
-Installation_Guide = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/INSTALL.md"
-Quick_Start = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICKSTART.md"
-Quick_Reference = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICK_REFERENCE.md"
+Installation Guide = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/INSTALL.md"
+Quick Start = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICKSTART.md"
+Quick Reference = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICK_REFERENCE.md"
 Changelog = "https://github.com/shreyasmene06/pyvm-updater/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
