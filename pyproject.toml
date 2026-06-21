@@ -46,7 +46,15 @@ where = ["src"]
 "" = "src"
 
 [project.urls]
+Homepage = "https://github.com/shreyasmene06/pyvm-updater"
 Repository = "https://github.com/shreyasmene06/pyvm-updater"
+Documentation = "https://github.com/shreyasmene06/pyvm-updater/tree/main/docs"
+Issues = "https://github.com/shreyasmene06/pyvm-updater/issues"
+License = "https://github.com/shreyasmene06/pyvm-updater/blob/main/LICENSE"
+Installation_Guide = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/INSTALL.md"
+Quick_Start = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICKSTART.md"
+Quick_Reference = "https://github.com/shreyasmene06/pyvm-updater/blob/main/docs/QUICK_REFERENCE.md"
+Changelog = "https://github.com/shreyasmene06/pyvm-updater/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
