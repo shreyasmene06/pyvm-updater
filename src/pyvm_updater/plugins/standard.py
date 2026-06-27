@@ -239,6 +239,45 @@ class WindowsInstaller(InstallerPlugin):
             arch = "win32"
 
         installer_url = f"https://www.python.org/ftp/python/{version}/python-{version}-{arch}.exe"
+
+        # Check if the requested installer executable actually exists on python.org.
+        # Security-only releases (like 3.10.20, 3.11.15) do not provide Windows .exe installers.
+        import requests
+
+        try:
+            print("🔍 Verifying installer availability on python.org...")
+            resp = requests.head(installer_url, timeout=5)
+            if resp.status_code == 404:
+                print(
+                    f"⚠️  Official pre-compiled installer for {version} was not found on python.org (likely a source-only security release)."
+                )
+                print(
+                    f"🔍 Searching for the latest available pre-compiled binary in the Python {major}.{minor} series..."
+                )
+
+                current_patch = int(parts[2])
+                found_working = False
+                for patch in range(current_patch - 1, -1, -1):
+                    probe_version = f"{major}.{minor}.{patch}"
+                    probe_url = f"https://www.python.org/ftp/python/{probe_version}/python-{probe_version}-{arch}.exe"
+                    try:
+                        probe_resp = requests.head(probe_url, timeout=3)
+                        if probe_resp.status_code == 200:
+                            print(f"Found latest pre-compiled binary release: Python {probe_version}")
+                            version = probe_version
+                            installer_url = probe_url
+                            found_working = True
+                            break
+                    except Exception:
+                        pass
+
+                if not found_working:
+                    print(f"❌ No pre-compiled installer found for any version in the Python {major}.{minor} series.")
+                    return False
+        except Exception:
+            # If the check fails (e.g. network issue/timeout), just fall back to standard download behavior
+            pass
+
         temp_dir = tempfile.gettempdir()
         installer_path = os.path.join(temp_dir, f"python-{version}-installer.exe")
 
@@ -261,6 +300,24 @@ class WindowsInstaller(InstallerPlugin):
         try:
             cmd = [installer_path]
 
+            # Detect Virtual Environment
+            venv_path = os.environ.get("VIRTUAL_ENV")
+
+            if venv_path:
+                print("🌿 Virtual environment detected. Installing locally (no admin required)...")
+                cmd.append("InstallAllUsers=0")
+                cmd.append("Include_launcher=0")
+
+                if not kwargs.get("install_path"):
+                    target_dir = os.path.join(venv_path, f"python-{version}")
+                    cmd.append(f"TargetDir={target_dir}")
+                    # Force passive so it doesn't show UI and prompt for admin anyway
+                    cmd.append("/passive")
+            else:
+                print("💻 No virtual environment detected. Defaulting to system-wide installation.")
+                if not kwargs.get("install_path"):
+                    cmd.append("InstallAllUsers=1")
+
             # Add options from wizard if provided
             if kwargs.get("add_to_path"):
                 cmd.append("PrependPath=1")
@@ -269,7 +326,8 @@ class WindowsInstaller(InstallerPlugin):
                 cmd.append(f"TargetDir={kwargs['install_path']}")
 
             # Default to passive installation if options are provided to avoid too much manual interaction
-            if kwargs.get("add_to_path") or kwargs.get("install_path"):
+            # If we already added /passive from venv logic, this won't hurt, but let's be safe
+            if (kwargs.get("add_to_path") or kwargs.get("install_path")) and "/passive" not in cmd:
                 cmd.append("/passive")
 
             result = subprocess.run(cmd, check=False)
@@ -298,7 +356,44 @@ class WindowsInstaller(InstallerPlugin):
         if not is_python_version_installed(version):
             return False
 
-        # Try winget
+        venv_path = os.environ.get("VIRTUAL_ENV")
+        if venv_path:
+            # Venv Mode: Simply locate the local directory and delete it
+            print("🌿 Virtual environment detected. Scoping uninstallation strictly to the venv...")
+            import glob
+
+            # Find matching local directories (e.g., venv/python-3.11 or venv/python-3.11.9)
+            pattern = os.path.join(venv_path, f"python-{version}*")
+            matches = glob.glob(pattern)
+
+            if not matches:
+                # If we didn't find it with the full version string, try major.minor prefix match
+                major_minor = ".".join(version.split(".")[:2])
+                pattern = os.path.join(venv_path, f"python-{major_minor}*")
+                matches = glob.glob(pattern)
+
+            if matches:
+                success = True
+                for match in matches:
+                    if os.path.isdir(match):
+                        try:
+                            print(f"🧹 Deleting local Python directory: {match}")
+                            # Use shutil.rmtree to delete the local folder
+                            shutil.rmtree(match)
+                            print("✅ Successfully removed local Python from venv!")
+                        except Exception as e:
+                            print(f"❌ Failed to delete {match}: {e}")
+                            success = False
+                return success
+            else:
+                print(f"❌ Python {version} is a global system/Store installation.")
+                print(
+                    "💡 To uninstall global/system versions, please deactivate your virtual environment or run pyvm from a standard/admin terminal."
+                )
+                return False
+
+        # Global/System Mode (No active venv): Use winget for standard system uninstallation
+        print("💻 System-wide/Admin terminal detected. Uninstalling Python globally...")
         if shutil.which("winget"):
             major_minor = ".".join(version.split(".")[:2])
             potential_ids = [
@@ -308,16 +403,20 @@ class WindowsInstaller(InstallerPlugin):
 
             for pkg_id in potential_ids:
                 try:
+                    print(f"🔍 Executing winget uninstall for ID: {pkg_id}...")
                     result = subprocess.run(
-                        ["winget", "uninstall", "--id", pkg_id, "--silent"],
-                        capture_output=True,
-                        text=True,
+                        ["winget", "uninstall", "--id", pkg_id, "--silent", "--accept-source-agreements"],
                         check=False,
                     )
                     if result.returncode == 0:
+                        print(f"✅ Successfully uninstalled Python {major_minor} globally!")
                         return True
-                except Exception:
+                except Exception as e:
+                    print(f"⚠️ winget uninstall failed for {pkg_id}: {e}")
                     continue
+        else:
+            print("❌ winget is not available on this system to perform global uninstallation.")
+
         return False
 
     def get_priority(self) -> int:

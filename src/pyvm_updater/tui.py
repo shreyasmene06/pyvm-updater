@@ -120,7 +120,7 @@ class AvailableList(ListView):
     BINDINGS = [
         Binding("tab", "focus_next_panel", "Next Panel", show=False),
         Binding("shift+tab", "focus_prev_panel", "Prev Panel", show=False),
-        Binding("enter", "install_selected", "Install", show=True),
+        Binding("enter", "select_cursor", "Install", show=True),
         Binding("w", "wizard_selected", "Wizard", show=True),
     ]
 
@@ -131,12 +131,6 @@ class AvailableList(ListView):
     def action_focus_prev_panel(self) -> None:
         if hasattr(self.screen, "focus_prev_panel"):
             self.screen.focus_prev_panel()  # type: ignore[attr-defined]
-
-    def action_install_selected(self) -> None:
-        if self.highlighted_child and isinstance(self.highlighted_child, VersionItem):
-            version = self.highlighted_child.version
-            if hasattr(self.screen, "start_install"):
-                self.screen.start_install(version)  # type: ignore[attr-defined]
 
     def action_wizard_selected(self) -> None:
         if self.highlighted_child and isinstance(self.highlighted_child, VersionItem):
@@ -312,7 +306,7 @@ class MainScreen(Screen):
                     yield InstalledList(id="installed-list")
 
                 with Vertical(classes="panel", id="available-panel"):
-                    yield Static("AVAILABLE (Enter to install)", classes="panel-title", id="available-title")
+                    yield Static("AVAILABLE (Click/Enter to install)", classes="panel-title", id="available-title")
                     yield AvailableList(id="available-list")
 
                 with Vertical(classes="panel", id="status-panel"):
@@ -322,7 +316,7 @@ class MainScreen(Screen):
 
             with Horizontal(id="button-area"):
                 yield Button("Refresh [R]", id="refresh-btn", variant="default")
-                yield Button("Update [U]", id="update-btn", variant="primary")
+                yield Button("Update to Latest [U]", id="update-btn", variant="primary")
                 yield Button("Wizard [W]", id="wizard-btn", variant="default")
                 yield Button("Rollback [B]", id="rollback-btn", variant="warning")
                 yield Button("Quit [Q]", id="quit-btn", variant="error")
@@ -446,7 +440,7 @@ class MainScreen(Screen):
 
         for v in self.installed_versions:
             ver = v.get("version", "Unknown")
-            path = v.get("path", "")
+            path = v.get("path") or ""
             is_current = v.get("default", False)
             is_store = v.get("store", False)
 
@@ -495,7 +489,12 @@ class MainScreen(Screen):
 
     def start_install(self, version: str) -> None:
         """Start installing a version (called from AvailableList)"""
-        self.run_install_with_suspend(version)
+        from .version import is_python_version_installed
+
+        if is_python_version_installed(version):
+            self.run_switch_with_suspend(version)
+        else:
+            self.run_install_with_suspend(version)
 
     def action_start_wizard(self) -> None:
         """Start wizard without a version pre-selected"""
@@ -566,6 +565,94 @@ class MainScreen(Screen):
             status_bar.set_message("Installation had issues.", "yellow")
 
         # Refresh to show updated installed versions
+        self.refresh_all()
+
+    def run_switch_with_suspend(self, version: str) -> None:
+        """Run switch logic with TUI suspended so terminal output is visible"""
+        import os
+        import subprocess
+
+        from textual.app import SuspendNotSupported
+
+        from .installers import update_python_windows
+        from .utils import get_os_info
+        from .version import get_installed_python_versions
+
+        os_name, _ = get_os_info()
+        success = False
+
+        def do_switch():
+            print(f"\n{'=' * 50}")
+            print(f"Switching default Python to {version}")
+            print(f"{'=' * 50}\n")
+
+            target_path = None
+            for v in get_installed_python_versions():
+                if v["version"] == version or v["version"].startswith(version):
+                    target_path = v.get("path")
+                    break
+
+            if not target_path:
+                print(f"❌ Could not locate executable for Python {version}.")
+                return False
+
+            venv_path = os.environ.get("VIRTUAL_ENV")
+
+            if venv_path:
+                print(f"🌿 Virtual environment detected at: {venv_path}")
+                print(f"Upgrading venv to use Python {version}...")
+                try:
+                    result = subprocess.run([target_path, "-m", "venv", "--upgrade", venv_path], check=False)
+                    if result.returncode == 0:
+                        print("✅ Virtual environment upgraded successfully.")
+                        return True
+                    else:
+                        print(f"❌ Failed to upgrade virtual environment (exit code {result.returncode}).")
+                        return False
+                except Exception as e:
+                    print(f"❌ Error upgrading venv: {e}")
+                    return False
+            else:
+                if os_name == "windows":
+                    print("💻 System environment detected.")
+                    print(f"Setting system default to Python {version}...")
+                    try:
+                        import winreg
+
+                        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment", 0, winreg.KEY_SET_VALUE)
+                        winreg.SetValueEx(key, "PY_PYTHON", 0, winreg.REG_SZ, version)
+                        winreg.CloseKey(key)
+                        print("✅ Set PY_PYTHON environment variable to", version)
+                    except Exception as e:
+                        print(f"⚠️  Could not set PY_PYTHON: {e}")
+
+                    return update_python_windows(version, add_to_path=True)
+                else:
+                    print("💻 System environment detected.")
+                    print("On Linux/macOS, pyvm does not modify system defaults.")
+                    print("Please use 'update-alternatives' or modify your PATH.")
+                    return False
+
+        try:
+            with self.app.suspend():
+                success = do_switch()
+                print(f"\n{'=' * 50}")
+                print("\nPress Enter to return to TUI...")
+                try:
+                    input()
+                except EOFError:
+                    pass
+        except SuspendNotSupported:
+            status_bar = self.query_one("#status-bar", StatusBar)
+            status_bar.set_message(f"Switching to Python {version}... (check terminal)", "yellow")
+            success = do_switch()
+
+        status_bar = self.query_one("#status-bar", StatusBar)
+        if success:
+            status_bar.set_message(f"Switched to Python {version} successfully!", "green")
+        else:
+            status_bar.set_message("Failed to switch Python version.", "yellow")
+
         self.refresh_all()
 
     def run_wizard_install_with_suspend(self, options: dict[str, Any]) -> None:
@@ -708,6 +795,11 @@ class MainScreen(Screen):
             self.action_rollback()
         elif event.button.id == "quit-btn":
             self.action_quit()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if event.list_view.id == "available-list":
+            if isinstance(event.item, VersionItem):
+                self.start_install(event.item.version)
 
     def action_refresh(self) -> None:
         self.refresh_all()

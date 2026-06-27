@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from .paths import get_config_dir
 from .paths import get_config_file as _get_config_file
+
+log = logging.getLogger("pyvm.config")
 
 # Try to import tomllib (Python 3.11+) or fallback to tomli
 try:
@@ -65,8 +68,8 @@ class Config:
             with open(CONFIG_FILE, "rb") as f:
                 user_config = tomllib.load(f)
             self._merge_config(user_config)
-        except Exception:
-            pass  # Silently ignore config errors
+        except Exception as e:
+            log.warning("failed to parse %s: %s", CONFIG_FILE, e)
 
     def _merge_config(self, user_config: dict[str, Any]) -> None:
         """Merge user config into default config."""
@@ -164,7 +167,8 @@ class Config:
             with open(CONFIG_FILE, "w") as f:
                 f.write("\n".join(lines))
             return True
-        except Exception:
+        except Exception as e:
+            log.warning("failed to save config to %s: %s", CONFIG_FILE, e)
             return False
 
     @staticmethod

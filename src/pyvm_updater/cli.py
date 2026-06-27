@@ -837,6 +837,21 @@ def venv_activate(name: str) -> None:
         sys.exit(1)
 
 
+@venv.command("path")
+@click.argument("name")
+def venv_path(name: str) -> None:
+    """Show the absolute path of a virtual environment."""
+    from .venv import get_venv_path
+
+    path = get_venv_path(name)
+
+    if path:
+        click.echo(path)
+    else:
+        click.echo(f"[X] Venv '{name}' not found.")
+        sys.exit(1)
+
+
 @venv.command("rename")
 @click.argument("old_name")
 @click.argument("new_name")
