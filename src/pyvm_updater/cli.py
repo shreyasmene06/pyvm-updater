@@ -360,32 +360,6 @@ def list_versions(show_all: bool, no_color: bool, output_json: bool) -> None:
                 click.echo(json.dumps(data, indent=2))
                 return
 
-            # Build a series->status lookup from active releases
-            release_status: dict[str, str] = {}
-            for rel in get_active_python_releases():
-                release_status[rel["series"]] = rel.get("status", "")
-
-            click.echo(f"{'VERSION':<12} {'STATUS'}")
-            click.echo("-" * 40)
-
-            for v in versions:
-                ver = v["version"]
-                parts = ver.split(".")
-                ver_series = f"{parts[0]}.{parts[1]}" if len(parts) >= 2 else ""
-                status_raw = release_status.get(ver_series, "")
-                color = _status_color(status_raw) if not no_color else None
-
-                status = ""
-                if ver == local_ver:
-                    status = "(installed)"
-                elif latest_ver and ver == latest_ver:
-                    status = "(latest)"
-
-                line = f"{ver:<12} {status}"
-                if color and not no_color:
-                    click.secho(line, fg=color)
-                else:
-                    click.echo(line)
         else:
             ctx = nullcontext() if output_json else console.status("Fetching active releases...")
             with ctx:
