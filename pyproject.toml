@@ -23,7 +23,6 @@ dependencies = [
     "click>=8.0.0",
     "textual>=0.40.0",
     "rich>=13.0.0",     # Used for enhanced CLI progress bars
-   
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -59,6 +58,7 @@ Changelog = "https://github.com/shreyasmene06/pyvm-updater/blob/main/CHANGELOG.m
 [project.optional-dependencies]
 dev = [
     "pytest>=6.0",
+    "pytest-mock>=3.0",
     "pytest-cov>=2.0",
     "black>=21.0",
     "flake8>=3.9",
@@ -151,7 +151,7 @@ skip-magic-trailing-comma = false
 docstring-code-format = true
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Start lenient, make stricter over time

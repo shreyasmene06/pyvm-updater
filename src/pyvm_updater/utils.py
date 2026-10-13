@@ -22,6 +22,8 @@ from rich.progress import (
 
 from .constants import DOWNLOAD_TIMEOUT, MAX_RETRIES, REQUEST_TIMEOUT, RETRY_DELAY
 
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
 
 def get_os_info() -> tuple[str, str]:
     """Detect the operating system and architecture."""
@@ -77,9 +79,13 @@ def fetch_remote_sha256(checksum_url: str) -> str | None:
         content = str(response.text).strip()
         parts = content.split()
         if parts:
-            return parts[0]
+            candidate = parts[0].lower()
+            if _SHA256_RE.match(candidate):
+                return candidate
+
+        click.echo("❌ Remote checksum payload is malformed or not a SHA-256 hash.")
         return None
-    except Exception as e:
+    except requests.RequestException as e:
         click.echo(f"❌ Failed to fetch checksum: {e}")
         return None
 
@@ -96,13 +102,14 @@ def verify_file_checksum(file_path: str, checksum_url: str) -> bool:
     click.echo("🔐 Verifying file integrity (SHA256)...")
 
     expected = fetch_remote_sha256(checksum_url)
-    if not expected:
-        click.echo("⚠️  Could not retrieve official checksum. Skipping integrity check.")
-        return True
+    if expected is None:
+        click.echo("❌ Could not retrieve remote checksum. Aborting integrity check.")
+        return False
 
     actual = calculate_sha256(file_path)
 
-    if actual.lower() != expected.lower():
+    # `expected` is already guaranteed to be lowercase from `fetch_remote_sha256`
+    if actual.lower() != expected:
         click.echo("❌ Checksum mismatch!")
         click.echo(f"Expected: {expected}")
         click.echo(f"Actual:   {actual}")

@@ -616,15 +616,16 @@ class MainScreen(Screen):
                 if os_name == "windows":
                     print("💻 System environment detected.")
                     print(f"Setting system default to Python {version}...")
-                    try:
-                        import winreg
+                    if sys.platform == "win32":
+                        try:
+                            import winreg
 
-                        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment", 0, winreg.KEY_SET_VALUE)
-                        winreg.SetValueEx(key, "PY_PYTHON", 0, winreg.REG_SZ, version)
-                        winreg.CloseKey(key)
-                        print("✅ Set PY_PYTHON environment variable to", version)
-                    except Exception as e:
-                        print(f"⚠️  Could not set PY_PYTHON: {e}")
+                            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment", 0, winreg.KEY_SET_VALUE)
+                            winreg.SetValueEx(key, "PY_PYTHON", 0, winreg.REG_SZ, version)
+                            winreg.CloseKey(key)
+                            print("✅ Set PY_PYTHON environment variable to", version)
+                        except Exception as e:
+                            print(f"⚠️  Could not set PY_PYTHON: {e}")
 
                     return update_python_windows(version, add_to_path=True)
                 else:
