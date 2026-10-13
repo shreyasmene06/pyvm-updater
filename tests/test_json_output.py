@@ -108,3 +108,29 @@ class TestListJson:
         assert len(data["versions"]) == 2
         assert data["versions"][0]["version"] == "3.13.0"
         assert data["versions"][0]["latest"] is True
+
+def test_list_json_releases():
+    """Validates standard active branch json mapping format."""
+    from click.testing import CliRunner
+    from pyvm_updater.cli import cli
+    import json
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["list", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert "local_version" in data
+    assert "releases" in data
+
+
+def test_list_all_json():
+    """Validates the --all flag combinations match output specs."""
+    from click.testing import CliRunner
+    from pyvm_updater.cli import cli
+    import json
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["list", "--all", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert "latest_version" in data
