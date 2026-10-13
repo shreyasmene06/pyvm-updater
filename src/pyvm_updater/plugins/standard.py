@@ -530,6 +530,15 @@ class SourceInstaller(InstallerPlugin):
             print("❌ Failed to download source code.")
             return False
 
+        checksum_url = source_url + ".sha256"
+        if not verify_file_checksum(source_path, checksum_url):
+            print("Aborting installation due to integrity check failure")
+            try:
+                os.remove(source_path)
+            except OSError:
+                pass
+            return False
+
         build_dir = os.path.join(temp_dir, f"Python-{version}")
         try:
             print("📦 Extracting and Compiling (this will take a few minutes)...")

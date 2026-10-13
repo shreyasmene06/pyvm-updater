@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from pyvm_updater.plugins.base import InstallerPlugin
 from pyvm_updater.plugins.manager import PluginManager
-from pyvm_updater.plugins.standard import MiseInstaller
+from pyvm_updater.plugins.standard import MiseInstaller, SourceInstaller
 
 
 class TestPluginManager:
@@ -100,3 +100,55 @@ class CustomTestPlugin(InstallerPlugin):
             # Clean up (remove from registered plugins)
             if "custom-test" in pm._plugins:
                 del pm._plugins["custom-test"]
+
+
+class TestSourceInstaller:
+    """Tests for the source installer."""
+
+    def test_install_verifies_downloaded_source_before_extracting(self, tmp_path):
+        """Source installs should verify the tarball before extraction or compilation."""
+        installer = SourceInstaller()
+        version = "3.12.1"
+        source_path = tmp_path / f"Python-{version}.tar.xz"
+
+        def fake_download(_url, destination):
+            Path(destination).write_bytes(b"source archive")
+            return True
+
+        with (
+            patch.object(installer, "_install_dependencies", return_value=True),
+            patch("pyvm_updater.plugins.standard.tempfile.gettempdir", return_value=str(tmp_path)),
+            patch("pyvm_updater.plugins.standard.download_file", side_effect=fake_download),
+            patch("pyvm_updater.plugins.standard.verify_file_checksum", return_value=True) as verify_checksum,
+            patch("pyvm_updater.plugins.standard.subprocess.run") as run,
+        ):
+            assert installer.install(version) is True
+
+        verify_checksum.assert_called_once_with(
+            str(source_path),
+            f"https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz.sha256",
+        )
+        run.assert_any_call(["tar", "-xf", str(source_path), "-C", str(tmp_path)], check=True)
+
+    def test_install_aborts_and_removes_source_when_checksum_fails(self, tmp_path):
+        """Checksum failures should stop the build and clean up the downloaded source."""
+        installer = SourceInstaller()
+        version = "3.12.1"
+        source_path = tmp_path / f"Python-{version}.tar.xz"
+
+        def fake_download(_url, destination):
+            Path(destination).write_bytes(b"tampered source archive")
+            return True
+
+        with (
+            patch.object(installer, "_install_dependencies", return_value=True),
+            patch("pyvm_updater.plugins.standard.tempfile.gettempdir", return_value=str(tmp_path)),
+            patch("pyvm_updater.plugins.standard.download_file", side_effect=fake_download),
+            patch("pyvm_updater.plugins.standard.verify_file_checksum", return_value=False) as verify_checksum,
+            patch("pyvm_updater.plugins.standard.subprocess.run") as run,
+        ):
+            assert installer.install(version) is False
+
+        verify_checksum.assert_called_once()
+        run.assert_not_called()
+        assert not source_path.exists()
