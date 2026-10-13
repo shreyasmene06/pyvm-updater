@@ -724,6 +724,7 @@ class MainScreen(Screen):
 
         os_name, _ = get_os_info()
         success = False
+        removal_error: Optional[Exception] = None
 
         def do_removal():
             print(f"\n{'='*50}")
@@ -740,6 +741,16 @@ class MainScreen(Screen):
                 print(f"Unsupported OS: {os_name}")
                 return False
 
+        def run_removal() -> None:
+            nonlocal removal_error, success
+
+            try:
+                success = do_removal()
+            except Exception as e:
+                removal_error = e
+                success = False
+                print(f"Error removing Python {version}: {e}")
+
         try:
             # Suspend TUI, run removal, then resume
             with self.app.suspend():
@@ -747,7 +758,7 @@ class MainScreen(Screen):
                 print(f"Are you sure you want to remove Python {version}? (y/n): ", end="", flush=True)
                 confirm = input().lower()
                 if confirm == "y":
-                    success = do_removal()
+                    run_removal()
                     print(f"\n{'='*50}")
                     if success:
                         print("Removal complete!")
@@ -766,11 +777,13 @@ class MainScreen(Screen):
             # Fallback
             status_bar = self.query_one("#status-bar", StatusBar)
             status_bar.set_message(f"Removing Python {version}... (check terminal)", "yellow")
-            success = do_removal()
+            run_removal()
 
         # Update status and refresh after resuming
         status_bar = self.query_one("#status-bar", StatusBar)
-        if success:
+        if removal_error:
+            status_bar.set_message(f"Error removing Python {version}: {removal_error}", "red")
+        elif success:
             status_bar.set_message(f"Python {version} removed successfully!", "green")
         else:
             status_bar.set_message("Removal had issues or was cancelled.", "yellow")
