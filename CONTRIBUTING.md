@@ -208,3 +208,9 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Questions
 
 If you have questions about contributing, open a discussion on GitHub or reach out to the maintainers.
+
+## Code of Conduct
+
+By participating in this project, you agree to follow our Code of Conduct.
+
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
