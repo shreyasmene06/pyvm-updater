@@ -28,13 +28,16 @@ def get_os_info() -> tuple[str, str]:
     os_name = platform.system().lower()
     machine = platform.machine().lower()
 
-    # Normalize architecture names
+    # Normalize architecture names. Unrecognized architectures are passed
+    # through unchanged so they are never misreported as x86.
     if machine in ["amd64", "x86_64"]:
         arch = "amd64"
     elif machine in ["arm64", "aarch64"]:
         arch = "arm64"
-    else:
+    elif machine in ["i386", "i486", "i586", "i686", "x86"]:
         arch = "x86"
+    else:
+        arch = machine
 
     return os_name, arch
 
